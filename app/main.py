@@ -1,25 +1,48 @@
-
-from fastapi import FastAPI, Depends
-from app.routers import example_router
-from app.config.db import async_engine
-
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+
+from app.config.db import async_engine
+from app.models.base import Base
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Código que se ejecuta al iniciar la app
+    # Crear tablas al iniciar la app
     try:
         async with async_engine.begin() as conn:
-            await conn.run_sync(lambda conn: None)
-        print("Conexión a la base de datos exitosa.")
+            await conn.run_sync(Base.metadata.create_all)
+        print("Tablas creadas / verificadas correctamente.")
     except Exception as e:
-        print("Error al conectar con la base de datos en el arranque:", e)
+        print("Error al conectar con la base de datos:", e)
     yield
-    # Código que se ejecuta al cerrar la app 
-app = FastAPI(lifespan=lifespan)
+    # Cleanup al cerrar
 
-# Incluye tus routers aquí
-app.include_router(example_router.router)
+
+app = FastAPI(
+    title="API Emergencia Vehicular",
+    description="API con eliminación lógica",
+    version="1.0.0",
+    lifespan=lifespan,
+    root_path="/api"
+)
+
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Routers
+from app.routers import authRoutes, tallerRoutes, mecanicoRoutes, tipoServicioRoutes
+app.include_router(authRoutes.router)
+app.include_router(tallerRoutes.router)
+app.include_router(mecanicoRoutes.router)
+app.include_router(tipoServicioRoutes.router)
+
 
 @app.get("/")
 def root():

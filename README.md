@@ -1,48 +1,45 @@
 # EmergenciaVehicular_API
 
-API para la gestión de emergencias vehiculares.
+Este proyecto es una API para la gestión de emergencias vehiculares.
 
----
 
 ## Requisitos Previos
 
-- **Python 3.x**
-- **UV** (gestor de entornos y dependencias)
+Para ejecutar este proyecto, asegúrate de tener instalado lo siguiente:
 
-Instala UV globalmente (solo este paso es con pip):
+1.  **Python**: Tener instalado Python (versión 3.x).
+2.  **UV**: Debe estar instalado de forma global. Abre una terminal y ejecuta:
+        ```bash
+        pip install uv
+        ```
+   (Solo este paso se hace con pip, todo lo demás se hace con UV)
 
-```
-pip install uv
-```
+## Ejecución del Proyecto
 
----
 
-## Configuración y Ejecución
+Sigue estos pasos para configurar y ejecutar el proyecto localmente:
 
-1. **Crear el entorno virtual y sincronizar dependencias:**
 
-```
-uv venv
-uv sync
-```
+1.  **Crear y sincronizar el entorno virtual y las dependencias:**
+                ```bash
+                uv venv
+                uv sync
+                ```
 
-2. **Activar el entorno virtual:**
-
-                - **Windows:**
-                        ```
+2.  **Activar el entorno virtual:**
+                - En Windows:
+                        ```bash
                         .venv\Scripts\activate
                         ```
-                - **macOS/Linux:**
-                        ```
+                - En macOS/Linux:
+                        ```bash
                         source .venv/bin/activate
                         ```
 
-3. **Configura tus variables de entorno:**
+3.  **Ejecutar la aplicación:**
+                ```bash
+                uv run uvicorn app.main:app --reload
+                ```
 
-        Copia el archivo `.env.template` a `.env` y completa los datos de conexión a tu base de datos PostgreSQL.
-
-4. **Ejecutar la aplicación:**
-
-```
-uv run fastapi dev app/main.py
-```
+---
+Desarrollado para SI2 - Semestre 1-2026.
