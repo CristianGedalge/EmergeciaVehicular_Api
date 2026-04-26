@@ -13,7 +13,7 @@ from fastapi import HTTPException, status
 
 load_dotenv()
 
-# ── Configuración JWT ──────────────────────────────────────────────
+#  Configuración JWT 
 SECRET_KEY: str = os.getenv("SECRET_KEY", "icorebiz")
 ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_HOURS: int = int(
@@ -24,7 +24,7 @@ RESET_TOKEN_EXPIRE_MINUTES: int = int(
 )
 
 
-# ── Crear token ────────────────────────────────────────────────────
+# Crear token 
 def crear_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """
     Genera un JWT firmado.
@@ -38,7 +38,7 @@ def crear_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-# ── Verificar / decodificar token ─────────────────────────────────
+# Verificar y decodificar token 
 def verificar_token(token: str) -> dict:
     """Decodifica y valida un JWT. Lanza HTTPException 401 si falla."""
     try:

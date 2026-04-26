@@ -5,6 +5,7 @@ import bcrypt
 
 from app.models.usuario import Usuario, RolEnum
 from app.models.taller import Taller
+from app.models.mecanico import Mecanico
 from app.schemas.auth import RegisterRequest, RegisterAdminRequest
 from app.config.auth import crear_token, verificar_token, RESET_TOKEN_EXPIRE_MINUTES
 from app.helpers.email import enviarEmail, generarEmailReset, FRONTEND_URL
@@ -78,7 +79,6 @@ async def autenticarUsuario(db: AsyncSession, correo: str, password: str):
             claims["tallerId"] = taller.id
 
     elif usuario.rol == RolEnum.MECANICO:
-        from app.models.mecanico import Mecanico
         query_mec = select(Mecanico).where(
             Mecanico.usuario_id == usuario.id,
             Mecanico.estado == True

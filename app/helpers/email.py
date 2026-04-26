@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ── Configuración SMTP ────────────────────────────────────────────
+#  Configuración SMTP 
 MAIL_FROM: str = os.getenv("MAIL_FROM", "")
 MAIL_PASSWORD: str = os.getenv("MAIL_PASSWORD", "")
 MAIL_SERVER: str = os.getenv("MAIL_SERVER", "smtp.gmail.com")

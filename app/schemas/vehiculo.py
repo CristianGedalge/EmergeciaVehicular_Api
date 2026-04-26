@@ -2,7 +2,6 @@ from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime
 
-
 class VehiculoBase(BaseModel):
     marca: str
     modelo: str
@@ -10,10 +9,8 @@ class VehiculoBase(BaseModel):
     placa: str
     color: Optional[str] = None
 
-
 class VehiculoCreate(VehiculoBase):
-    cliente_id: int
-
+    pass
 
 class VehiculoUpdate(BaseModel):
     marca: Optional[str] = None
@@ -21,8 +18,6 @@ class VehiculoUpdate(BaseModel):
     anio: Optional[int] = None
     placa: Optional[str] = None
     color: Optional[str] = None
-    estado: Optional[bool] = None
-
 
 class VehiculoResponse(VehiculoBase):
     id: int
