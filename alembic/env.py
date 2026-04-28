@@ -38,6 +38,7 @@ from app.models.taller import Taller
 from app.models.mecanico import Mecanico, mecanico_especialidad
 from app.models.tipo_servicio import TipoServicio
 from app.models.vehiculo import Vehiculo
+from app.models.solicitud import Solicitud
 
 
 target_metadata = Base.metadata

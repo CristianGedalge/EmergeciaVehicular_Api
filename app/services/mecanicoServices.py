@@ -9,13 +9,38 @@ from app.services.authServices import hashearPassword
 
 
 async def listarMecanicos(db: AsyncSession, taller_id: int):
-    """Listar mecánicos activos de un taller."""
-    query = select(Mecanico).where(
+    """Listar mecánicos activos de un taller junto con sus datos de usuario y especialidades."""
+    query = select(Mecanico, Usuario).join(Usuario, Mecanico.usuario_id == Usuario.id).where(
         Mecanico.taller_id == taller_id,
         Mecanico.estado == True
     )
     result = await db.execute(query)
-    return result.scalars().all()
+    
+    lista = []
+    for mecanico, usuario in result.all():
+        # Buscar ramas/especialidades del mecánico
+        query_esp = select(mecanico_especialidad.c.tipo_servicio_id).where(
+            mecanico_especialidad.c.mecanico_id == mecanico.id
+        )
+        esps = (await db.execute(query_esp)).scalars().all()
+        
+        # Combinar datos en un diccionario que coincida con MecanicoResponse
+        lista.append({
+            "id": mecanico.id,
+            "usuario_id": mecanico.usuario_id,
+            "taller_id": mecanico.taller_id,
+            "latitud": mecanico.latitud,
+            "longitud": mecanico.longitud,
+            "disponible": mecanico.disponible,
+            "estado": mecanico.estado,
+            "fecha_creacion": mecanico.fecha_creacion,
+            "nombre": usuario.nombre,
+            "correo": usuario.correo,
+            "telefono": usuario.telefono,
+            "especialidades": list(esps)
+        })
+        
+    return lista
 
 
 async def obtenerMecanico(db: AsyncSession, mecanico_id: int):

@@ -27,5 +27,9 @@ class MecanicoResponse(BaseModel):
     disponible: bool
     estado: bool
     fecha_creacion: datetime
+    nombre: Optional[str] = None
+    correo: Optional[str] = None
+    telefono: Optional[str] = None
+    especialidades: List[int] = []
 
     model_config = {"from_attributes": True}
