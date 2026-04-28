@@ -4,7 +4,6 @@ __pycache__
 .git
 .env
 .python-version
-uv.lock
 Dockerfile
 docker-compose.yml
 alembic.ini
