@@ -7,11 +7,11 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 # Set working directory
 WORKDIR /app
 
-# Enable bytecode compilation
-ENV UV_COMPILE_BYTECODE=1
-
 # Copy only the files needed for dependency installation
 COPY pyproject.toml uv.lock ./
+
+# Enable bytecode compilation
+ENV UV_COMPILE_BYTECODE=1
 
 # Install dependencies without dynamic dev dependencies
 # --frozen ensures we use the exact versions from uv.lock
