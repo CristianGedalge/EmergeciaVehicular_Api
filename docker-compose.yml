@@ -1,0 +1,15 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    environment:
+      - DB_URL=${DATABASE_URL:-} # Reemplaza con tu variable de conexión si es distinta
+    restart: always
+
+# Nota: Si necesitas una base de datos local para pruebas en docker, 
+# puedes agregar un servicio de 'db' aquí.

@@ -19,7 +19,13 @@ DATABASE_URL = f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTG
 
 # Manejo de errores al crear el engine async
 try:
-    async_engine = create_async_engine(DATABASE_URL, echo=False)
+    async_engine = create_async_engine(
+            DATABASE_URL, 
+            echo=False,
+            pool_pre_ping=True,
+            pool_size=5,
+            max_overflow=10
+        )
     AsyncSessionLocal = sessionmaker(
         bind=async_engine,
         class_=AsyncSession,
