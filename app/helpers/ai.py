@@ -13,7 +13,7 @@ async def clasificarSolicitudConIA(descripcion: str, urlsFotos: list, listaServi
     Clasifica la emergencia basándose ÚNICAMENTE en la descripción textual.
     """
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-pro')
         
         prompt = f"""
         Actúa como un experto en triaje de emergencias vehiculares. 
