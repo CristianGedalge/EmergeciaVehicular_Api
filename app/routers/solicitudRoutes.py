@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form, BackgroundTasks
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from app.models.tipo_servicio import TipoServicio
 from typing import List
 
 from app.config.db import get_db
@@ -20,9 +21,21 @@ router = APIRouter(
 
 async def procesarIA(db: AsyncSession, solicitudId: int, descripcion: str, urls: List[str]):
     """Tarea en segundo plano para clasificar con IA y notificar."""
-    categoria = await clasificarSolicitudConIA(descripcion, urls)
-    await clasificarYPublicar(db, solicitudId, categoria)
-    # Aquí después añadiremos el envío de Notificaciones Push/Sockets
+    try:
+        #Obtener todos los nombres de servicios disponibles (en mayúsculas para comparar)
+        query = select(TipoServicio.nombre)
+        result = await db.execute(query)
+        lista_servicios = [n.upper() for n in result.scalars().all()]
+        
+        #Llamar a la IA enviándole la lista dinámica
+        categoria = await clasificarSolicitudConIA(descripcion, urls, lista_servicios)
+        
+        #Vincular y publicar
+        await clasificarYPublicar(db, solicitudId, categoria)
+        
+        #Aquí después añadiremos el envío de Notificaciones Push/Sockets
+    except Exception as e:
+        print(f"Error procesando IA en background: {e}")
 
 @router.post("/", response_model=SolicitudResponse, status_code=201)
 async def crearSolicitudRoute(
