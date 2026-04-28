@@ -1,35 +1,30 @@
-# Use a matching Python version
+# 1. Imagen base
 FROM python:3.13-slim-bookworm
 
-# Install uv
+# 2. Instalar uv (Copiamos los binarios)
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Set working directory
+# 3. DEFINIR EL DIRECTORIO DE TRABAJO PRIMERO
 WORKDIR /app
 
-# Copy only the files needed for dependency installation
+# 4. Copiar los archivos de dependencias AL DIRECTORIO ACTUAL (.)
+# Asegúrate de que estos archivos estén en la misma carpeta que el Dockerfile en GitHub
 COPY pyproject.toml uv.lock ./
 
-# Enable bytecode compilation
+# 5. Instalar dependencias
 ENV UV_COMPILE_BYTECODE=1
-
-# Install dependencies without dynamic dev dependencies
-# --frozen ensures we use the exact versions from uv.lock
 RUN uv sync --frozen --no-dev --no-install-project
 
-# Copy the rest of the application
+# 6. Copiar el resto del código
 COPY . .
 
-# Final sync to install the project itself
+# 7. Sincronización final del proyecto
 RUN uv sync --frozen --no-dev
 
-# Expose the port FastAPI runs on
+# 8. Configuración de ejecución
 EXPOSE 8000
-
-# Set environment variables for better logging and behavior
 ENV PYTHONUNBUFFERED=1
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Command to run the application
-# We use .venv/bin/uvicorn because uv sync creates a virtualenv in /app/.venv
+# Ejecutamos usando el path absoluto del venv para evitar fallos
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
