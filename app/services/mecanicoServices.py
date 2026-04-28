@@ -104,6 +104,19 @@ async def actualizarMecanico(db: AsyncSession, mecanico_id: int, datos: Mecanico
     if datos.disponible is not None:
         mecanico.disponible = datos.disponible
 
+    # Actualizar datos personales en la tabla Usuario si se envían
+    if any([datos.nombre, datos.correo, datos.telefono]):
+        query_usuario = select(Usuario).where(Usuario.id == mecanico.usuario_id)
+        result_usuario = await db.execute(query_usuario)
+        usuario = result_usuario.scalar_one_or_none()
+        if usuario:
+            if datos.nombre:
+                usuario.nombre = datos.nombre
+            if datos.correo:
+                usuario.correo = datos.correo
+            if datos.telefono is not None:
+                usuario.telefono = datos.telefono
+
     # Actualizar especialidades si se envían
     if datos.especialidades is not None:
         # Borrar las anteriores

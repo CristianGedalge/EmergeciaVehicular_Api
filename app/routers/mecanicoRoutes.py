@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
+from sqlalchemy import select
 
 from app.config.db import get_db
 from app.dependencies.auth import obtenerUsuarioActual

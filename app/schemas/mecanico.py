@@ -12,6 +12,9 @@ class MecanicoCreate(BaseModel):
 
 
 class MecanicoUpdate(BaseModel):
+    nombre: Optional[str] = None
+    correo: Optional[str] = None
+    telefono: Optional[str] = None
     latitud: Optional[float] = None
     longitud: Optional[float] = None
     disponible: Optional[bool] = None
