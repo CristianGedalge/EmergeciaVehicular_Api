@@ -43,8 +43,8 @@ async def clasificarYPublicar(db: AsyncSession, solicitudId: int, categoriaIA: s
     todos = (await db.execute(select(TipoServicio))).scalars().all()
     print(f"2. Servicios en DB: {[t.nombre for t in todos]}")
     
-    # Buscar el ID ignorando mayúsculas/minúsculas para mayor robustez
-    query = select(TipoServicio).where(func.lower(TipoServicio.nombre) == func.lower(categoriaIA))
+    # Buscar el ID ignorando mayúsculas/minúsculas y quitando espacios en blanco (TRIM)
+    query = select(TipoServicio).where(func.trim(func.lower(TipoServicio.nombre)) == func.trim(func.lower(categoriaIA)))
     tipo = (await db.execute(query)).scalar_one_or_none()
     
     if tipo:
