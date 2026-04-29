@@ -36,14 +36,19 @@ async def crearSolicitud(
 
 async def clasificarYPublicar(db: AsyncSession, solicitudId: int, categoriaIA: str):
     """Asocia el tipo de servicio detectado por la IA y cambia el estado."""
-    print(f"DEBUG: IA respondió '{categoriaIA}' (Tipo: {type(categoriaIA)})")
+    print(f"\n--- DEBUG CLASIFICACIÓN ---")
+    print(f"1. IA respondió: '{categoriaIA}'")
+    
+    # Listar todos los servicios para ver qué hay en la DB
+    todos = (await db.execute(select(TipoServicio))).scalars().all()
+    print(f"2. Servicios en DB: {[t.nombre for t in todos]}")
     
     # Buscar el ID ignorando mayúsculas/minúsculas para mayor robustez
     query = select(TipoServicio).where(func.lower(TipoServicio.nombre) == func.lower(categoriaIA))
     tipo = (await db.execute(query)).scalar_one_or_none()
     
     if tipo:
-        print(f"DEBUG: Match encontrado en DB -> {tipo.nombre} (ID: {tipo.id})")
+        print(f"3. Match exitoso: {tipo.nombre} (ID: {tipo.id})")
         query_sol = select(Solicitud).where(Solicitud.id == solicitudId)
         solicitud = (await db.execute(query_sol)).scalar_one_or_none()
         
@@ -52,7 +57,10 @@ async def clasificarYPublicar(db: AsyncSession, solicitudId: int, categoriaIA: s
             solicitud.estado = EstadoSolicitudEnum.PUBLICADO
             await db.commit()
             await db.refresh(solicitud)
+            print(f"4. Solicitud {solicitudId} actualizada a PUBLICADO")
             return solicitud
+    else:
+        print(f"3. ❌ ERROR: No se encontró ningún match para '{categoriaIA}'")
             
     return None
 
