@@ -47,15 +47,15 @@ async def procesarIA(db: AsyncSession, solicitudId: int, descripcion: str, urls:
             res_talleres = await db.execute(query_talleres)
             talleres_ids = res_talleres.scalars().unique().all()
 
-            # 5. NOTIFICAR POR WEBSOCKET (COMENTADO TEMPORALMENTE)
-            # mensaje = {
-            #     "evento": "NUEVA_EMERGENCIA",
-            #     "datos": jsonable_encoder(solicitud)
-            # }
-            # for t_id in talleres_ids:
-            #     await socket_manager.send_to_taller(t_id, mensaje)
+            # 5. NOTIFICAR POR WEBSOCKET
+            mensaje = {
+                "evento": "NUEVA_EMERGENCIA",
+                "datos": jsonable_encoder(solicitud)
+            }
+            for t_id in talleres_ids:
+                await socket_manager.send_to_taller(t_id, mensaje)
                 
-            # print(f"📢 Notificación enviada a {len(talleres_ids)} talleres para la solicitud {solicitudId}")
+            print(f"📢 Notificación enviada a {len(talleres_ids)} talleres para la solicitud {solicitudId}")
 
     except Exception as e:
         print(f"Error procesando IA y notificaciones: {e}")
