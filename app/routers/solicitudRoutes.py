@@ -13,10 +13,14 @@ from app.dependencies.rolCheck import RequireRole
 from app.schemas.solicitud import SolicitudResponse, AceptarSolicitudRequest, AsignarMecanicoRequest
 from app.helpers.cloudinary import subirImagen
 from app.helpers.ai import clasificarSolicitudConIA
+from app.helpers.firebase_push import enviarPushNotification
+from app.models.usuario import Usuario
+from app.models.notificacion import Notificacion
 from app.services.solicitudServices import (
     crearSolicitud, clasificarYPublicar, listarSolicitudesParaTalleres, 
     aceptarSolicitud, asignarMecanico, listarHistorialTaller,
-    listarSolicitudesCliente, listarSolicitudesMecanico
+    listarSolicitudesCliente, listarSolicitudesMecanico,
+    iniciarViaje, llegarASitio
 )
 
 router = APIRouter(
@@ -173,3 +177,79 @@ async def listarSolicitudesMecanicoRoute(
         raise HTTPException(status_code=404, detail="El usuario no está registrado como mecánico")
         
     return await listarSolicitudesMecanico(db, mecanicoId)
+
+@router.post("/{solicitudId}/iniciar-viaje", response_model=SolicitudResponse)
+async def iniciarViajeRoute(
+    solicitudId: int,
+    db: AsyncSession = Depends(get_db),
+    usuario: dict = Depends(RequireRole(["mecanico"]))
+):
+    """El mecánico indica que está en camino."""
+    query_mec = select(Mecanico.id).where(Mecanico.usuario_id == int(usuario["sub"]))
+    res_mec = await db.execute(query_mec)
+    mecanicoId = res_mec.scalar_one_or_none()
+    
+    solicitud = await iniciarViaje(db, solicitudId, mecanicoId)
+    if not solicitud:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+    
+    # --- NOTIFICACIÓN PUSH AL CLIENTE ---
+    try:
+        # Obtener datos del cliente
+        query_cli = select(Usuario.fcm_token, Usuario.nombre).where(Usuario.id == solicitud.cliente_id)
+        res_cli = await db.execute(query_cli)
+        fcm_token, nombre_cliente = res_cli.one()
+
+        if fcm_token:
+            await enviarPushNotification(
+                fcm_token=fcm_token,
+                titulo="🚀 ¡Mecánico en camino!",
+                cuerpo=f"El mecánico ya inició el viaje para atender tu solicitud #{solicitud.id}.",
+                data={"solicitud_id": str(solicitud.id), "tipo": "ESTADO_VIAJE", "estado": "EN_CAMINO"}
+            )
+    except Exception as e:
+        print(f"Error enviando push al cliente: {e}")
+
+    # Notificar también por WebSocket (si está conectado)
+    await socket_manager.send_to_user(solicitud.cliente_id, {
+        "evento": "ESTADO_ACTUALIZADO",
+        "datos": {"solicitud_id": solicitud.id, "estado": "EN_CAMINO"}
+    })
+    return solicitud
+
+@router.post("/{solicitudId}/llegar-sitio", response_model=SolicitudResponse)
+async def llegarASitioRoute(
+    solicitudId: int,
+    db: AsyncSession = Depends(get_db),
+    usuario: dict = Depends(RequireRole(["mecanico"]))
+):
+    """El mecánico indica que ya llegó al lugar."""
+    query_mec = select(Mecanico.id).where(Mecanico.usuario_id == int(usuario["sub"]))
+    res_mec = await db.execute(query_mec)
+    mecanicoId = res_mec.scalar_one_or_none()
+    
+    solicitud = await llegarASitio(db, solicitudId, mecanicoId)
+    if not solicitud:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+    
+    # --- NOTIFICACIÓN PUSH AL CLIENTE ---
+    try:
+        query_cli = select(Usuario.fcm_token).where(Usuario.id == solicitud.cliente_id)
+        res_cli = await db.execute(query_cli)
+        fcm_token = res_cli.scalar_one_or_none()
+
+        if fcm_token:
+            await enviarPushNotification(
+                fcm_token=fcm_token,
+                titulo="📍 ¡El mecánico ha llegado!",
+                cuerpo=f"El técnico ya se encuentra en tu ubicación para la solicitud #{solicitud.id}.",
+                data={"solicitud_id": str(solicitud.id), "tipo": "ESTADO_VIAJE", "estado": "EN_SITIO"}
+            )
+    except Exception as e:
+        print(f"Error enviando push al cliente: {e}")
+
+    await socket_manager.send_to_user(solicitud.cliente_id, {
+        "evento": "ESTADO_ACTUALIZADO",
+        "datos": {"solicitud_id": solicitud.id, "estado": "EN_SITIO"}
+    })
+    return solicitud

@@ -233,3 +233,31 @@ async def listarSolicitudesMecanico(db: AsyncSession, mecanicoId: int):
         lista.append(sol)
     return lista
 
+async def iniciarViaje(db: AsyncSession, solicitudId: int, mecanicoId: int):
+    """Cambia el estado a EN_CAMINO."""
+    query = select(Solicitud).where(Solicitud.id == solicitudId, Solicitud.mecanico_id == mecanicoId)
+    res = await db.execute(query)
+    solicitud = res.scalar_one_or_none()
+    
+    if not solicitud:
+        return None
+        
+    solicitud.estado = EstadoSolicitudEnum.EN_CAMINO
+    await db.commit()
+    await db.refresh(solicitud)
+    return solicitud
+
+async def llegarASitio(db: AsyncSession, solicitudId: int, mecanicoId: int):
+    """Cambia el estado a EN_SITIO."""
+    query = select(Solicitud).where(Solicitud.id == solicitudId, Solicitud.mecanico_id == mecanicoId)
+    res = await db.execute(query)
+    solicitud = res.scalar_one_or_none()
+    
+    if not solicitud:
+        return None
+        
+    solicitud.estado = EstadoSolicitudEnum.EN_SITIO
+    await db.commit()
+    await db.refresh(solicitud)
+    return solicitud
+
