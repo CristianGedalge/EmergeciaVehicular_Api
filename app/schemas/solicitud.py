@@ -21,6 +21,10 @@ class SolicitudResponse(BaseModel):
     
     estado: EstadoSolicitudEnum
     fecha_creacion: datetime
+    
+    # Campos adicionales para vista rápida
+    placa_vehiculo: Optional[str] = None
+    nombre_servicio: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

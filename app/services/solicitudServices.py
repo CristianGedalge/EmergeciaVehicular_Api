@@ -7,6 +7,7 @@ from app.models.solicitud import Solicitud, EstadoSolicitudEnum
 from app.models.mecanico import Mecanico, mecanico_especialidad
 from app.models.taller import Taller
 from app.models.tipo_servicio import TipoServicio
+from app.models.vehiculo import Vehiculo
 
 async def crearSolicitud(
     db: AsyncSession, 
@@ -32,6 +33,11 @@ async def crearSolicitud(
     db.add(nueva)
     await db.commit()
     await db.refresh(nueva)
+    
+    # Obtener placa para la respuesta inicial
+    res_veh = await db.execute(select(Vehiculo.placa).where(Vehiculo.id == vehiculoId))
+    nueva.placa_vehiculo = res_veh.scalar()
+    
     return nueva
 
 async def clasificarYPublicar(db: AsyncSession, solicitudId: int, categoriaIA: str):
@@ -65,11 +71,21 @@ async def clasificarYPublicar(db: AsyncSession, solicitudId: int, categoriaIA: s
     return None
 
 async def listarSolicitudesParaTalleres(db: AsyncSession, tallerId: int):
-    """Listar solicitudes que están PUBLICADAS y que el taller puede atender."""
-    # Nota: Aquí después filtraremos por cercanía y especialidad
-    query = select(Solicitud).where(Solicitud.estado == EstadoSolicitudEnum.PUBLICADO)
+    """Listar solicitudes PUBLICADAS con datos de vehículo y servicio."""
+    query = (
+        select(Solicitud, Vehiculo.placa, TipoServicio.nombre)
+        .join(Vehiculo, Solicitud.vehiculo_id == Vehiculo.id)
+        .outerjoin(TipoServicio, Solicitud.tipo_servicio_id == TipoServicio.id)
+        .where(Solicitud.estado == EstadoSolicitudEnum.PUBLICADO)
+    )
     result = await db.execute(query)
-    return result.scalars().all()
+    
+    lista = []
+    for sol, placa, nombre_serv in result.all():
+        sol.placa_vehiculo = placa
+        sol.nombre_servicio = nombre_serv
+        lista.append(sol)
+    return lista
 
 async def aceptarSolicitud(db: AsyncSession, solicitudId: int, tallerId: int, precioEstimado: float):
     """El taller acepta la solicitud si sigue disponible."""
