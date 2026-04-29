@@ -8,6 +8,9 @@ from app.models.mecanico import Mecanico, mecanico_especialidad
 from app.models.taller import Taller
 from app.models.tipo_servicio import TipoServicio
 from app.models.vehiculo import Vehiculo
+from app.models.usuario import Usuario
+from app.models.notificacion import Notificacion
+from app.helpers.firebase_push import enviarPushNotification
 
 async def crearSolicitud(
     db: AsyncSession, 
@@ -71,12 +74,20 @@ async def clasificarYPublicar(db: AsyncSession, solicitudId: int, categoriaIA: s
     return None
 
 async def listarSolicitudesParaTalleres(db: AsyncSession, tallerId: int):
-    """Listar solicitudes PUBLICADAS con datos de vehículo y servicio."""
+    """Listar solicitudes PUBLICADAS y ACEPTADAS (del taller) con datos de vehículo y servicio."""
+    from sqlalchemy import or_
+    
     query = (
         select(Solicitud, Vehiculo.placa, TipoServicio.nombre)
         .join(Vehiculo, Solicitud.vehiculo_id == Vehiculo.id)
         .outerjoin(TipoServicio, Solicitud.tipo_servicio_id == TipoServicio.id)
-        .where(Solicitud.estado == EstadoSolicitudEnum.PUBLICADO)
+        .where(
+            or_(
+                Solicitud.estado == EstadoSolicitudEnum.PUBLICADO,
+                (Solicitud.estado == EstadoSolicitudEnum.ACEPTADO) & (Solicitud.taller_id == tallerId)
+            )
+        )
+        .order_by(Solicitud.fecha_creacion.desc())
     )
     result = await db.execute(query)
     
@@ -107,7 +118,7 @@ async def aceptarSolicitud(db: AsyncSession, solicitudId: int, tallerId: int, pr
     return solicitud
 
 async def asignarMecanico(db: AsyncSession, solicitudId: int, tallerId: int, mecanicoId: int):
-    """El taller asigna un mecánico a la solicitud aceptada."""
+    """El taller asigna un mecánico a la solicitud aceptada y le envía push notification."""
     query = select(Solicitud).where(
         Solicitud.id == solicitudId, 
         Solicitud.taller_id == tallerId
@@ -122,4 +133,49 @@ async def asignarMecanico(db: AsyncSession, solicitudId: int, tallerId: int, mec
     
     await db.commit()
     await db.refresh(solicitud)
+    
+    # --- ENVIAR PUSH NOTIFICATION AL MECÁNICO ---
+    try:
+        # Buscar el usuario_id del mecánico y su fcm_token
+        query_mec = select(Mecanico.usuario_id).where(Mecanico.id == mecanicoId)
+        res_mec = await db.execute(query_mec)
+        usuario_id = res_mec.scalar_one_or_none()
+        
+        if usuario_id:
+            query_user = select(Usuario.fcm_token, Usuario.nombre).where(Usuario.id == usuario_id)
+            res_user = await db.execute(query_user)
+            row = res_user.first()
+            
+            if row:
+                fcm_token, nombre_mecanico = row
+                
+                # 1. Guardar notificación en la base de datos
+                notif = Notificacion(
+                    usuario_id=usuario_id,
+                    titulo="🚨 Nueva emergencia asignada",
+                    mensaje=f"Se te ha asignado la solicitud #{solicitudId}. {solicitud.descripcion or 'Revisa los detalles en la app.'}"
+                )
+                db.add(notif)
+                await db.commit()
+                
+                # 2. Enviar push notification al dispositivo
+                if fcm_token:
+                    await enviarPushNotification(
+                        fcm_token=fcm_token,
+                        titulo="🚨 Nueva emergencia asignada",
+                        cuerpo=f"Solicitud #{solicitudId}: {solicitud.descripcion or 'Revisa los detalles.'}",
+                        data={
+                            "solicitud_id": solicitudId,
+                            "tipo": "EMERGENCIA_ASIGNADA",
+                            "latitud": str(solicitud.latitud),
+                            "longitud": str(solicitud.longitud)
+                        }
+                    )
+                    print(f"📲 Push enviado al mecánico {nombre_mecanico} (usuario {usuario_id})")
+                else:
+                    print(f"⚠️ El mecánico {nombre_mecanico} no tiene token FCM registrado.")
+    except Exception as e:
+        print(f"Error enviando push notification: {e}")
+    
     return solicitud
+
