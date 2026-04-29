@@ -26,6 +26,8 @@ htmlcov/
 
 # Firebase / Google credentials (NUNCA subir a GitHub)
 firebase-credentials.json
+firebase-credenciales.json
 *-firebase-adminsdk-*.json
 google-credentials.json
+google-services.json
 *.json.bak
