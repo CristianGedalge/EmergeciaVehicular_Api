@@ -23,3 +23,9 @@ __pycache__/
 .coverage.*
 .cache
 htmlcov/
+
+# Firebase / Google credentials (NUNCA subir a GitHub)
+firebase-credentials.json
+*-firebase-adminsdk-*.json
+google-credentials.json
+*.json.bak

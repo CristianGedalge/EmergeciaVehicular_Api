@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "7402815827",
+    "project_id": "emergecia-si2",
+    "storage_bucket": "emergecia-si2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:7402815827:android:84ae79c0e7fa758adea1a6",
+        "android_client_info": {
+          "package_name": "com.example.movilparcial"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGGgIYSIEbKJ9ZGX_9fVR1ub_UaZ4cXcg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
