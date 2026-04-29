@@ -36,19 +36,22 @@ async def crearSolicitud(
 
 async def clasificarYPublicar(db: AsyncSession, solicitudId: int, categoriaIA: str):
     """Asocia el tipo de servicio detectado por la IA y cambia el estado."""
-    # Buscar el ID del tipo de servicio que coincida con el nombre de la IA
+    # Buscar el ID del tipo de servicio que coincida EXACTAMENTE con lo que dijo la IA
     query = select(TipoServicio).where(TipoServicio.nombre == categoriaIA)
     tipo = (await db.execute(query)).scalar_one_or_none()
     
     if tipo:
-        stmt = update(Solicitud).where(Solicitud.id == solicitudId).values(
-            tipo_servicio_id=tipo.id,
-            estado=EstadoSolicitudEnum.PUBLICADO
-        )
-        await db.execute(stmt)
-        await db.commit()
-        return True
-    return False
+        query_sol = select(Solicitud).where(Solicitud.id == solicitudId)
+        solicitud = (await db.execute(query_sol)).scalar_one_or_none()
+        
+        if solicitud:
+            solicitud.tipo_servicio_id = tipo.id
+            solicitud.estado = EstadoSolicitudEnum.PUBLICADO
+            await db.commit()
+            await db.refresh(solicitud)
+            return solicitud
+            
+    return None
 
 async def listarSolicitudesParaTalleres(db: AsyncSession, tallerId: int):
     """Listar solicitudes que están PUBLICADAS y que el taller puede atender."""

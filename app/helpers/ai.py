@@ -36,7 +36,7 @@ async def clasificarSolicitudConIA(descripcion: str, urlsFotos: list, listaServi
             contents=prompt
         )
         
-        return response.text.strip().upper()
+        return response.text.strip()
         
     except Exception as e:
         print(f"Error en clasificación IA (Gemini 2.5): {e}")

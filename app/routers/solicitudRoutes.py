@@ -1,7 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from fastapi.encoders import jsonable_encoder
 from app.models.tipo_servicio import TipoServicio
+from app.models.mecanico import Mecanico, mecanico_especialidad
+from app.helpers.socket_manager import socket_manager
 from typing import List
 
 from app.config.db import get_db
@@ -21,22 +24,41 @@ router = APIRouter(
 )
 
 async def procesarIA(db: AsyncSession, solicitudId: int, descripcion: str, urls: List[str]):
-    """Tarea en segundo plano para clasificar con IA y notificar."""
+    """Tarea en segundo plano para clasificar con IA y notificar a talleres interesados."""
     try:
-        #Obtener todos los nombres de servicios disponibles (en mayúsculas para comparar)
-        query = select(TipoServicio.nombre)
-        result = await db.execute(query)
-        lista_servicios = [n.upper() for n in result.scalars().all()]
+        # 1. Obtener todos los nombres de servicios disponibles para la IA
+        query_servicios = select(TipoServicio.nombre)
+        res_servicios = await db.execute(query_servicios)
+        lista_servicios = res_servicios.scalars().all()
         
-        #Llamar a la IA enviándole la lista dinámica
+        # 2. Llamar a la IA
         categoria = await clasificarSolicitudConIA(descripcion, urls, lista_servicios)
         
-        #Vincular y publicar
-        await clasificarYPublicar(db, solicitudId, categoria)
+        # 3. Vincular y publicar solicitud
+        solicitud = await clasificarYPublicar(db, solicitudId, categoria)
         
-        #Aquí después añadiremos el envío de Notificaciones Push/Sockets
+        if solicitud:
+            # 4. BUSCAR TALLERES INTERESADOS (que tengan mecánicos con esa especialidad)
+            query_talleres = select(Mecanico.taller_id).join(
+                mecanico_especialidad, Mecanico.id == mecanico_especialidad.c.mecanico_id
+            ).where(
+                mecanico_especialidad.c.tipo_servicio_id == solicitud.tipo_servicio_id
+            )
+            res_talleres = await db.execute(query_talleres)
+            talleres_ids = res_talleres.scalars().unique().all()
+
+            # 5. NOTIFICAR POR WEBSOCKET
+            mensaje = {
+                "evento": "NUEVA_EMERGENCIA",
+                "datos": jsonable_encoder(solicitud)
+            }
+            for t_id in talleres_ids:
+                await socket_manager.send_to_taller(t_id, mensaje)
+                
+            print(f"📢 Notificación enviada a {len(talleres_ids)} talleres para la solicitud {solicitudId}")
+
     except Exception as e:
-        print(f"Error procesando IA en background: {e}")
+        print(f"Error procesando IA y notificaciones: {e}")
 
 @router.post("/", response_model=SolicitudResponse, status_code=201)
 async def crearSolicitudRoute(
