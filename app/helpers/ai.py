@@ -1,37 +1,43 @@
-import google.generativeai as genai
 import os
-import requests
+from google import genai
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Configuración de Google Gemini
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# Inicializamos el cliente de Google GenAI con la versión v1beta
+# que es la que soporta los modelos 2.5
+client = genai.Client(
+    api_key=os.getenv("GEMINI_API_KEY"),
+    http_options={'api_version': 'v1beta'}
+)
 
 async def clasificarSolicitudConIA(descripcion: str, urlsFotos: list, listaServicios: list) -> str:
     """
-    Clasifica la emergencia basándose ÚNICAMENTE en la descripción textual.
+    Clasifica la emergencia basándose únicamente en la descripción textual
+    usando el modelo Gemini 2.5 Flash.
     """
     try:
-        # Usamos la versión 2.0 que está disponible en tu cuenta
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        # Usamos el modelo más avanzado detectado en tus pruebas
+        model_id = 'gemini-2.5-flash'
         
-        prompt = f"""
-        Actúa como un experto en triaje de emergencias vehiculares. 
-        Analiza el siguiente reporte del cliente: 
+        servicios_str = ", ".join(listaServicios)
         
-        Reporte: "{descripcion}"
+        prompt = (
+            "Actúa como un experto en triaje de emergencias vehiculares. "
+            f'Analiza el siguiente reporte del cliente: "{descripcion}". '
+            f"Clasifica la emergencia en UNA de las siguientes categorías disponibles: [{servicios_str}]. "
+            "Responde exclusivamente con el nombre de la categoría, exactamente como aparece en la lista, sin texto adicional. "
+            "Si no puedes clasificarlo, responde: MECÁNICA LIGERA."
+        )
         
-        Basado en esto, clasifica la emergencia en UNA de las siguientes categorías disponibles:
-        [{", ".join(listaServicios)}]
+        # Generar respuesta usando la nueva sintaxis del cliente
+        response = client.models.generate_content(
+            model=model_id,
+            contents=prompt
+        )
         
-        Responde exclusivamente con el nombre de la categoría, exactamente como aparece en la lista, sin texto adicional. 
-        Si no puedes clasificarlo, responde: MECÁNICA LIGERA.
-        """
-        
-        response = await model.generate_content_async(prompt)
         return response.text.strip().upper()
         
     except Exception as e:
-        print(f"Error en clasificación IA: {e}")
+        print(f"Error en clasificación IA (Gemini 2.5): {e}")
         return "MECÁNICA LIGERA"
