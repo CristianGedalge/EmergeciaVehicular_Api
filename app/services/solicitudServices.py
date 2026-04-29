@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import update
+from sqlalchemy import update, func
 from typing import List
 
 from app.models.solicitud import Solicitud, EstadoSolicitudEnum
@@ -38,8 +38,8 @@ async def clasificarYPublicar(db: AsyncSession, solicitudId: int, categoriaIA: s
     """Asocia el tipo de servicio detectado por la IA y cambia el estado."""
     print(f"DEBUG: IA respondió '{categoriaIA}' (Tipo: {type(categoriaIA)})")
     
-    # Buscar el ID del tipo de servicio que coincida EXACTAMENTE con lo que dijo la IA
-    query = select(TipoServicio).where(TipoServicio.nombre == categoriaIA)
+    # Buscar el ID ignorando mayúsculas/minúsculas para mayor robustez
+    query = select(TipoServicio).where(func.lower(TipoServicio.nombre) == func.lower(categoriaIA))
     tipo = (await db.execute(query)).scalar_one_or_none()
     
     if tipo:
