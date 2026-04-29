@@ -15,7 +15,8 @@ from app.helpers.cloudinary import subirImagen
 from app.helpers.ai import clasificarSolicitudConIA
 from app.services.solicitudServices import (
     crearSolicitud, clasificarYPublicar, listarSolicitudesParaTalleres, 
-    aceptarSolicitud, asignarMecanico
+    aceptarSolicitud, asignarMecanico, listarHistorialTaller,
+    listarSolicitudesCliente, listarSolicitudesMecanico
 )
 
 router = APIRouter(
@@ -135,3 +136,40 @@ async def asignarMecanicoRoute(
         raise HTTPException(status_code=404, detail="Solicitud no encontrada o no pertenece a tu taller")
     
     return solicitud
+
+@router.get("/historial", response_model=List[SolicitudResponse])
+async def listarHistorialRoute(
+    db: AsyncSession = Depends(get_db),
+    usuario: dict = Depends(RequireRole(["admin"]))
+):
+    """Listar todo el historial de servicios de este taller."""
+    tallerId = usuario.get("tallerId")
+    if not tallerId:
+        raise HTTPException(status_code=400, detail="El usuario no tiene un taller asociado")
+        
+    return await listarHistorialTaller(db, tallerId)
+
+@router.get("/cliente", response_model=List[SolicitudResponse])
+async def listarSolicitudesClienteRoute(
+    db: AsyncSession = Depends(get_db),
+    usuario: dict = Depends(RequireRole(["cliente"]))
+):
+    """Listar todas las solicitudes del cliente logueado."""
+    clienteId = int(usuario["sub"])
+    return await listarSolicitudesCliente(db, clienteId)
+
+@router.get("/mecanico", response_model=List[SolicitudResponse])
+async def listarSolicitudesMecanicoRoute(
+    db: AsyncSession = Depends(get_db),
+    usuario: dict = Depends(RequireRole(["mecanico"]))
+):
+    """Listar todas las solicitudes asignadas al mecánico logueado."""
+    # Para el mecánico, necesitamos su ID de la tabla 'mecanico', no solo el usuario_id
+    query_mec = select(Mecanico.id).where(Mecanico.usuario_id == int(usuario["sub"]))
+    res_mec = await db.execute(query_mec)
+    mecanicoId = res_mec.scalar_one_or_none()
+    
+    if not mecanicoId:
+        raise HTTPException(status_code=404, detail="El usuario no está registrado como mecánico")
+        
+    return await listarSolicitudesMecanico(db, mecanicoId)

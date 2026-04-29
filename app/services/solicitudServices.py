@@ -179,3 +179,57 @@ async def asignarMecanico(db: AsyncSession, solicitudId: int, tallerId: int, mec
     
     return solicitud
 
+async def listarHistorialTaller(db: AsyncSession, tallerId: int):
+    """Listar TODAS las solicitudes asociadas a un taller (Historial)."""
+    query = (
+        select(Solicitud, Vehiculo.placa, TipoServicio.nombre)
+        .join(Vehiculo, Solicitud.vehiculo_id == Vehiculo.id)
+        .outerjoin(TipoServicio, Solicitud.tipo_servicio_id == TipoServicio.id)
+        .where(Solicitud.taller_id == tallerId)
+        .order_by(Solicitud.fecha_creacion.desc())
+    )
+    result = await db.execute(query)
+    
+    lista = []
+    for sol, placa, nombre_serv in result.all():
+        sol.placa_vehiculo = placa
+        sol.nombre_servicio = nombre_serv
+        lista.append(sol)
+    return lista
+
+async def listarSolicitudesCliente(db: AsyncSession, clienteId: int):
+    """Listar todas las solicitudes creadas por un cliente específico."""
+    query = (
+        select(Solicitud, Vehiculo.placa, TipoServicio.nombre)
+        .join(Vehiculo, Solicitud.vehiculo_id == Vehiculo.id)
+        .outerjoin(TipoServicio, Solicitud.tipo_servicio_id == TipoServicio.id)
+        .where(Solicitud.cliente_id == clienteId)
+        .order_by(Solicitud.fecha_creacion.desc())
+    )
+    result = await db.execute(query)
+    
+    lista = []
+    for sol, placa, nombre_serv in result.all():
+        sol.placa_vehiculo = placa
+        sol.nombre_servicio = nombre_serv
+        lista.append(sol)
+    return lista
+
+async def listarSolicitudesMecanico(db: AsyncSession, mecanicoId: int):
+    """Listar todas las solicitudes asignadas a un mecánico específico."""
+    query = (
+        select(Solicitud, Vehiculo.placa, TipoServicio.nombre)
+        .join(Vehiculo, Solicitud.vehiculo_id == Vehiculo.id)
+        .outerjoin(TipoServicio, Solicitud.tipo_servicio_id == TipoServicio.id)
+        .where(Solicitud.mecanico_id == mecanicoId)
+        .order_by(Solicitud.fecha_creacion.desc())
+    )
+    result = await db.execute(query)
+    
+    lista = []
+    for sol, placa, nombre_serv in result.all():
+        sol.placa_vehiculo = placa
+        sol.nombre_servicio = nombre_serv
+        lista.append(sol)
+    return lista
+
