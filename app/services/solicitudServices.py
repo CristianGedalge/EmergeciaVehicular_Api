@@ -36,11 +36,14 @@ async def crearSolicitud(
 
 async def clasificarYPublicar(db: AsyncSession, solicitudId: int, categoriaIA: str):
     """Asocia el tipo de servicio detectado por la IA y cambia el estado."""
+    print(f"DEBUG: IA respondió '{categoriaIA}' (Tipo: {type(categoriaIA)})")
+    
     # Buscar el ID del tipo de servicio que coincida EXACTAMENTE con lo que dijo la IA
     query = select(TipoServicio).where(TipoServicio.nombre == categoriaIA)
     tipo = (await db.execute(query)).scalar_one_or_none()
     
     if tipo:
+        print(f"DEBUG: Match encontrado en DB -> {tipo.nombre} (ID: {tipo.id})")
         query_sol = select(Solicitud).where(Solicitud.id == solicitudId)
         solicitud = (await db.execute(query_sol)).scalar_one_or_none()
         
