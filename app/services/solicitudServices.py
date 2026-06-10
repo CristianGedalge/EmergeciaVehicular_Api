@@ -10,6 +10,7 @@ from app.models.tipo_servicio import TipoServicio
 from app.models.vehiculo import Vehiculo
 from app.models.usuario import Usuario
 from app.models.notificacion import Notificacion
+from app.models.pago import Pago
 from app.helpers.firebase_push import enviarPushNotification
 
 async def crearSolicitud(
@@ -75,15 +76,31 @@ async def clasificarYPublicar(db: AsyncSession, solicitudId: int, categoriaIA: s
 
 async def listarSolicitudesParaTalleres(db: AsyncSession, tallerId: int):
     """Listar solicitudes PUBLICADAS y ACEPTADAS (del taller) con datos de vehículo y servicio."""
-    from sqlalchemy import or_
+    from sqlalchemy import or_, and_
     
+    # Subconsulta para verificar si el taller tiene algún mecánico disponible con la especialidad
+    subq = (
+        select(1)
+        .select_from(Mecanico)
+        .join(mecanico_especialidad, Mecanico.id == mecanico_especialidad.c.mecanico_id)
+        .where(
+            Mecanico.taller_id == tallerId,
+            Mecanico.disponible == True,
+            Mecanico.estado == True,
+            mecanico_especialidad.c.tipo_servicio_id == Solicitud.tipo_servicio_id
+        )
+    )
+
     query = (
         select(Solicitud, Vehiculo.placa, TipoServicio.nombre)
         .join(Vehiculo, Solicitud.vehiculo_id == Vehiculo.id)
         .outerjoin(TipoServicio, Solicitud.tipo_servicio_id == TipoServicio.id)
         .where(
             or_(
-                Solicitud.estado == EstadoSolicitudEnum.PUBLICADO,
+                and_(
+                    Solicitud.estado == EstadoSolicitudEnum.PUBLICADO,
+                    subq.exists()
+                ),
                 (Solicitud.estado == EstadoSolicitudEnum.ACEPTADO) & (Solicitud.taller_id == tallerId)
             )
         )
@@ -130,6 +147,14 @@ async def asignarMecanico(db: AsyncSession, solicitudId: int, tallerId: int, mec
         
     solicitud.mecanico_id = mecanicoId
     solicitud.estado = EstadoSolicitudEnum.ASIGNADO
+    
+    # Cambiar disponibilidad del mecánico a False (ocupado)
+    query_mec_obj = select(Mecanico).where(Mecanico.id == mecanicoId)
+    res_mec_obj = await db.execute(query_mec_obj)
+    mecanico_obj = res_mec_obj.scalar_one_or_none()
+    if mecanico_obj:
+        mecanico_obj.disponible = False
+        print(f"💼 Mecánico ID {mecanicoId} marcado como NO DISPONIBLE (disponible=False).")
     
     await db.commit()
     await db.refresh(solicitud)
@@ -200,18 +225,21 @@ async def listarHistorialTaller(db: AsyncSession, tallerId: int):
 async def listarSolicitudesCliente(db: AsyncSession, clienteId: int):
     """Listar todas las solicitudes creadas por un cliente específico."""
     query = (
-        select(Solicitud, Vehiculo.placa, TipoServicio.nombre)
+        select(Solicitud, Vehiculo.placa, TipoServicio.nombre, Pago.estado_pago)
         .join(Vehiculo, Solicitud.vehiculo_id == Vehiculo.id)
         .outerjoin(TipoServicio, Solicitud.tipo_servicio_id == TipoServicio.id)
+        .outerjoin(Pago, Solicitud.id == Pago.solicitud_id)
         .where(Solicitud.cliente_id == clienteId)
         .order_by(Solicitud.fecha_creacion.desc())
     )
     result = await db.execute(query)
     
     lista = []
-    for sol, placa, nombre_serv in result.all():
+    for sol, placa, nombre_serv, estado_pago in result.all():
         sol.placa_vehiculo = placa
         sol.nombre_servicio = nombre_serv
+        if estado_pago:
+            sol.estado_pago = estado_pago.value if hasattr(estado_pago, 'value') else estado_pago
         lista.append(sol)
     return lista
 
@@ -260,4 +288,65 @@ async def llegarASitio(db: AsyncSession, solicitudId: int, mecanicoId: int):
     await db.commit()
     await db.refresh(solicitud)
     return solicitud
+
+from app.models.pago import Pago, MetodoPagoEnum, EstadoPagoEnum
+from app.models.cobro_extra import CobroExtra
+
+async def finalizarServicio(db: AsyncSession, solicitudId: int, mecanicoId: int, cobros_extra: list, metodo_pago: str):
+    """Cambia el estado a FINALIZADO y registra cobros extra y pago."""
+    query = select(Solicitud).where(Solicitud.id == solicitudId, Solicitud.mecanico_id == mecanicoId)
+    res = await db.execute(query)
+    solicitud = res.scalar_one_or_none()
+    
+    if not solicitud:
+        return None
+
+    # Calcular precio final
+    precio_estimado = float(solicitud.precio_estimado or 0.0)
+    total_extra = sum(extra.monto for extra in cobros_extra)
+    precio_final = precio_estimado + total_extra
+
+    # Guardar cobros extra en BD
+    for extra in cobros_extra:
+        nuevo_cobro = CobroExtra(
+            solicitud_id=solicitud.id,
+            concepto=extra.concepto,
+            monto=extra.monto
+        )
+        db.add(nuevo_cobro)
+
+    # Actualizar solicitud
+    solicitud.precio_final = precio_final
+    solicitud.estado = EstadoSolicitudEnum.FINALIZADO
+
+    # Crear el Pago pendiente
+    metodo = MetodoPagoEnum.TARJETA
+    estado_pago = EstadoPagoEnum.PENDIENTE
+    
+    if metodo_pago.upper() == "EFECTIVO":
+        metodo = MetodoPagoEnum.EFECTIVO
+        estado_pago = EstadoPagoEnum.COMPLETADO
+    elif metodo_pago.upper() == "QR":
+        metodo = MetodoPagoEnum.QR
+        estado_pago = EstadoPagoEnum.PENDIENTE # O COMPLETADO si se simula acreditación
+
+    nuevo_pago = Pago(
+        solicitud_id=solicitud.id,
+        monto=precio_final,
+        metodo_pago=metodo,
+        estado_pago=estado_pago
+    )
+    db.add(nuevo_pago)
+
+    # El mecanico vuelve a estar disponible
+    query_mec_obj = select(Mecanico).where(Mecanico.id == mecanicoId)
+    res_mec_obj = await db.execute(query_mec_obj)
+    mecanico_obj = res_mec_obj.scalar_one_or_none()
+    if mecanico_obj:
+        mecanico_obj.disponible = True
+
+    await db.commit()
+    await db.refresh(solicitud)
+    return solicitud
+
 

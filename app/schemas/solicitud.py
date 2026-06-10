@@ -25,6 +25,7 @@ class SolicitudResponse(BaseModel):
     # Campos adicionales para vista rápida
     placa_vehiculo: Optional[str] = None
     nombre_servicio: Optional[str] = None
+    estado_pago: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -33,3 +34,11 @@ class AceptarSolicitudRequest(BaseModel):
 
 class AsignarMecanicoRequest(BaseModel):
     mecanico_id: int
+
+class CobroExtraSchema(BaseModel):
+    concepto: str
+    monto: float
+
+class FinalizarServicioRequest(BaseModel):
+    cobros_extra: List[CobroExtraSchema] = []
+    metodo_pago: str = "TARJETA" # TARJETA, EFECTIVO, QR

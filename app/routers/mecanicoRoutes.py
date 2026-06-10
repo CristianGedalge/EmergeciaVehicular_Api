@@ -77,6 +77,7 @@ async def actualizar(
     usuario: dict = Depends(RequireRole(["admin", "superadmin", "mecanico"]))
 ):
     """Actualizar mecánico."""
+    print(mecanico_id,"holaaaaaaaaaaaa")
     mecanico = await obtenerMecanico(db, mecanico_id)
     if not mecanico:
         raise HTTPException(status_code=404, detail="Mecánico no encontrado")

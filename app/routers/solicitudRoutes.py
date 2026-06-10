@@ -10,7 +10,7 @@ from typing import List
 from app.config.db import get_db
 from app.dependencies.auth import obtenerUsuarioActual
 from app.dependencies.rolCheck import RequireRole
-from app.schemas.solicitud import SolicitudResponse, AceptarSolicitudRequest, AsignarMecanicoRequest
+from app.schemas.solicitud import SolicitudResponse, AceptarSolicitudRequest, AsignarMecanicoRequest, FinalizarServicioRequest
 from app.helpers.cloudinary import subirImagen
 from app.helpers.ai import clasificarSolicitudConIA
 from app.helpers.firebase_push import enviarPushNotification
@@ -20,7 +20,7 @@ from app.services.solicitudServices import (
     crearSolicitud, clasificarYPublicar, listarSolicitudesParaTalleres, 
     aceptarSolicitud, asignarMecanico, listarHistorialTaller,
     listarSolicitudesCliente, listarSolicitudesMecanico,
-    iniciarViaje, llegarASitio
+    iniciarViaje, llegarASitio, finalizarServicio
 )
 
 router = APIRouter(
@@ -43,11 +43,13 @@ async def procesarIA(db: AsyncSession, solicitudId: int, descripcion: str, urls:
         solicitud = await clasificarYPublicar(db, solicitudId, categoria)
         
         if solicitud:
-            # 4. BUSCAR TALLERES INTERESADOS (que tengan mecánicos con esa especialidad)
+            # 4. BUSCAR TALLERES INTERESADOS (que tengan mecánicos con esa especialidad y disponibles)
             query_talleres = select(Mecanico.taller_id).join(
                 mecanico_especialidad, Mecanico.id == mecanico_especialidad.c.mecanico_id
             ).where(
-                mecanico_especialidad.c.tipo_servicio_id == solicitud.tipo_servicio_id
+                mecanico_especialidad.c.tipo_servicio_id == solicitud.tipo_servicio_id,
+                Mecanico.disponible == True,
+                Mecanico.estado == True
             )
             res_talleres = await db.execute(query_talleres)
             talleres_ids = res_talleres.scalars().unique().all()
@@ -251,5 +253,49 @@ async def llegarASitioRoute(
     await socket_manager.send_to_user(solicitud.cliente_id, {
         "evento": "ESTADO_ACTUALIZADO",
         "datos": {"solicitud_id": solicitud.id, "estado": "EN_SITIO"}
+    })
+    return solicitud
+
+@router.post("/{solicitudId}/finalizar-servicio", response_model=SolicitudResponse)
+async def finalizarServicioRoute(
+    solicitudId: int,
+    datos: FinalizarServicioRequest,
+    db: AsyncSession = Depends(get_db),
+    usuario: dict = Depends(RequireRole(["mecanico"]))
+):
+    """El mecánico indica que ya finalizó el trabajo y registra cobros."""
+    query_mec = select(Mecanico.id).where(Mecanico.usuario_id == int(usuario["sub"]))
+    res_mec = await db.execute(query_mec)
+    mecanicoId = res_mec.scalar_one_or_none()
+    
+    solicitud = await finalizarServicio(
+        db, 
+        solicitudId, 
+        mecanicoId, 
+        datos.cobros_extra, 
+        datos.metodo_pago
+    )
+    if not solicitud:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+    
+    # --- NOTIFICACIÓN PUSH AL CLIENTE ---
+    try:
+        query_cli = select(Usuario.fcm_token).where(Usuario.id == solicitud.cliente_id)
+        res_cli = await db.execute(query_cli)
+        fcm_token = res_cli.scalar_one_or_none()
+
+        if fcm_token:
+            await enviarPushNotification(
+                fcm_token=fcm_token,
+                titulo="✅ ¡Servicio finalizado!",
+                cuerpo=f"Tu servicio #{solicitud.id} está finalizado. Por favor, procede al pago.",
+                data={"solicitud_id": str(solicitud.id), "tipo": "ESTADO_VIAJE", "estado": "FINALIZADO"}
+            )
+    except Exception as e:
+        print(f"Error enviando push al cliente: {e}")
+
+    await socket_manager.send_to_user(solicitud.cliente_id, {
+        "evento": "ESTADO_ACTUALIZADO",
+        "datos": {"solicitud_id": solicitud.id, "estado": "FINALIZADO"}
     })
     return solicitud

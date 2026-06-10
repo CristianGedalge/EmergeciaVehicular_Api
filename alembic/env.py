@@ -39,7 +39,9 @@ from app.models.mecanico import Mecanico, mecanico_especialidad
 from app.models.tipo_servicio import TipoServicio
 from app.models.vehiculo import Vehiculo
 from app.models.solicitud import Solicitud
-
+from app.models.pago import Pago
+from app.models.cobro_extra import CobroExtra
+from app.models.notificacion import Notificacion
 
 target_metadata = Base.metadata
 

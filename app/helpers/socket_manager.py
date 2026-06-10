@@ -34,4 +34,8 @@ class ConnectionManager:
         else:
             print(f"DEBUG_SOCKET: El taller {taller_id} NO está conectado en este momento.")
 
+    async def send_to_user(self, user_id: int, message: dict):
+        """Envía un mensaje JSON a un usuario/cliente conectado (alias de send_to_taller)."""
+        await self.send_to_taller(user_id, message)
+
 socket_manager = ConnectionManager()

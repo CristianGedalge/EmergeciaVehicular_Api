@@ -37,7 +37,7 @@ app.add_middleware(
 )
 
 # Routers
-from app.routers import authRoutes, tallerRoutes, mecanicoRoutes, tipoServicioRoutes, vehiculoRoutes, solicitudRoutes, usuarioRoutes, websocketRoutes
+from app.routers import authRoutes, tallerRoutes, mecanicoRoutes, tipoServicioRoutes, vehiculoRoutes, solicitudRoutes, usuarioRoutes, websocketRoutes, pagoRoutes
 app.include_router(authRoutes.router)
 app.include_router(tallerRoutes.router)
 app.include_router(mecanicoRoutes.router)
@@ -46,6 +46,7 @@ app.include_router(vehiculoRoutes.router)
 app.include_router(solicitudRoutes.router)
 app.include_router(usuarioRoutes.router)
 app.include_router(websocketRoutes.router)
+app.include_router(pagoRoutes.router)
 
 
 @app.get("/")

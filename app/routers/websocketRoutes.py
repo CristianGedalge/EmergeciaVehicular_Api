@@ -22,15 +22,24 @@ async def websocket_endpoint(websocket: WebSocket, taller_id: int):
             try:
                 msg = json.loads(data_text)
                 if msg.get("evento") == "ACTUALIZAR_UBICACION":
-                    cliente_id = msg.get("datos", {}).get("cliente_id")
+                    datos = msg.get("datos", {})
+                    cliente_id = datos.get("cliente_id")
+                    taller_id = datos.get("taller_id")
+                    lat = datos.get("lat")
+                    lng = datos.get("lng")
+                    print(f"[WS Log] Recibido ACTUALIZAR_UBICACION -> Lat: {lat}, Lng: {lng} | Reenviando a Cliente {cliente_id} y Taller {taller_id}")
+                    
+                    payload = {
+                        "evento": "UBICACION_MECANICO",
+                        "datos": datos
+                    }
+                    
                     if cliente_id:
-                        # Reenviamos la ubi al cliente que está escuchando su propio socket
-                        await socket_manager.send_to_user(cliente_id, {
-                            "evento": "UBICACION_MECANICO",
-                            "datos": msg.get("datos")
-                        })
-            except:
-                pass # Si no es JSON (como un simple string), lo ignoramos
+                        await socket_manager.send_to_user(cliente_id, payload)
+                    if taller_id:
+                        await socket_manager.send_to_taller(taller_id, payload)
+            except Exception as e:
+                print(f"Error procesando JSON de WS: {e}")
 
     except WebSocketDisconnect:
         socket_manager.disconnect(websocket, taller_id)

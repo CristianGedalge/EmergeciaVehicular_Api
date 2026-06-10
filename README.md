@@ -40,6 +40,10 @@ Sigue estos pasos para configurar y ejecutar el proyecto localmente:
                 ```bash
                 uv run uvicorn app.main:app --reload
                 ```
-
+4.  **Ejecutar la app para movil**
+                
+                ```bash
+                uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+                ```
 ---
 Desarrollado para SI2 - Semestre 1-2026.
