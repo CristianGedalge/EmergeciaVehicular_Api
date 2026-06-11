@@ -40,3 +40,10 @@ class Solicitud(Base):
     estado = Column(SQLEnum(EstadoSolicitudEnum), default=EstadoSolicitudEnum.PENDIENTE, nullable=False)
     fecha_creacion = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     fecha_actualizacion = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Timestamps de trazabilidad para KPIs
+    fecha_aceptado = Column(DateTime(timezone=True), nullable=True)   # Taller acepta la solicitud
+    fecha_en_camino = Column(DateTime(timezone=True), nullable=True)  # Mecánico sale al lugar
+    fecha_en_sitio = Column(DateTime(timezone=True), nullable=True)   # Mecánico llega al lugar
+    fecha_finalizado = Column(DateTime(timezone=True), nullable=True) # Servicio finalizado
+    fecha_cancelado = Column(DateTime(timezone=True), nullable=True)  # Solicitud cancelada

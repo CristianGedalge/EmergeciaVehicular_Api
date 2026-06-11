@@ -27,7 +27,9 @@ async def websocket_endpoint(websocket: WebSocket, taller_id: int):
                     taller_id = datos.get("taller_id")
                     lat = datos.get("lat")
                     lng = datos.get("lng")
-                    print(f"[WS Log] Recibido ACTUALIZAR_UBICACION -> Lat: {lat}, Lng: {lng} | Reenviando a Cliente {cliente_id} y Taller {taller_id}")
+                    print(f"===== DEBUG WS =====")
+                    print(f"[WS Log] Recibido ACTUALIZAR_UBICACION -> Lat: {lat}, Lng: {lng} | Cliente_id: {cliente_id}, Taller_id: {taller_id}")
+                    print(f"[WS Log] Conexiones activas en este servidor: {list(socket_manager.active_connections.keys())}")
                     
                     payload = {
                         "evento": "UBICACION_MECANICO",
@@ -35,9 +37,21 @@ async def websocket_endpoint(websocket: WebSocket, taller_id: int):
                     }
                     
                     if cliente_id:
+                        if cliente_id in socket_manager.active_connections:
+                            print(f"[WS Log] Enviando a Cliente {cliente_id}")
+                        else:
+                            print(f"[WS Log] Cliente {cliente_id} NO está conectado a este servidor.")
                         await socket_manager.send_to_user(cliente_id, payload)
+                        
                     if taller_id:
+                        if taller_id in socket_manager.active_connections:
+                            print(f"[WS Log] Enviando a Taller {taller_id}")
+                        else:
+                            print(f"[WS Log] Taller {taller_id} NO está conectado a este servidor.")
                         await socket_manager.send_to_taller(taller_id, payload)
+                    else:
+                        print(f"[WS Log] ADVERTENCIA: taller_id es Nulo o Vacío en el mensaje del mecánico.")
+                    print(f"====================")
             except Exception as e:
                 print(f"Error procesando JSON de WS: {e}")
 

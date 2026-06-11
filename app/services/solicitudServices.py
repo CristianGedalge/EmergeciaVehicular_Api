@@ -1,7 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import update, func
+from sqlalchemy.orm import aliased
 from typing import List
+from datetime import datetime, timezone
 
 from app.models.solicitud import Solicitud, EstadoSolicitudEnum
 from app.models.mecanico import Mecanico, mecanico_especialidad
@@ -129,6 +131,7 @@ async def aceptarSolicitud(db: AsyncSession, solicitudId: int, tallerId: int, pr
     solicitud.taller_id = tallerId
     solicitud.precio_estimado = precioEstimado
     solicitud.estado = EstadoSolicitudEnum.ACEPTADO
+    solicitud.fecha_aceptado = datetime.now(timezone.utc)
     
     await db.commit()
     await db.refresh(solicitud)
@@ -155,6 +158,14 @@ async def asignarMecanico(db: AsyncSession, solicitudId: int, tallerId: int, mec
     if mecanico_obj:
         mecanico_obj.disponible = False
         print(f"💼 Mecánico ID {mecanicoId} marcado como NO DISPONIBLE (disponible=False).")
+        
+    # Sumar 5 puntos al taller por la asignación
+    query_taller = select(Taller).where(Taller.id == tallerId)
+    res_taller = await db.execute(query_taller)
+    taller_obj = res_taller.scalar_one_or_none()
+    if taller_obj:
+        taller_obj.puntaje = (taller_obj.puntaje or 0) + 5
+        print(f"🌟 Taller ID {tallerId} sumó 5 puntos. Nuevo puntaje: {taller_obj.puntaje}")
     
     await db.commit()
     await db.refresh(solicitud)
@@ -206,38 +217,95 @@ async def asignarMecanico(db: AsyncSession, solicitudId: int, tallerId: int, mec
 
 async def listarHistorialTaller(db: AsyncSession, tallerId: int):
     """Listar TODAS las solicitudes asociadas a un taller (Historial)."""
+    MecanicoUsuario = aliased(Usuario)
     query = (
-        select(Solicitud, Vehiculo.placa, TipoServicio.nombre)
+        select(Solicitud, Vehiculo.placa, Vehiculo.marca, Vehiculo.modelo, Vehiculo.anio, Vehiculo.color, TipoServicio.nombre, Pago.estado_pago, Usuario.nombre.label("cliente_nombre"), MecanicoUsuario.nombre.label("mecanico_nombre"))
         .join(Vehiculo, Solicitud.vehiculo_id == Vehiculo.id)
+        .join(Usuario, Solicitud.cliente_id == Usuario.id)
         .outerjoin(TipoServicio, Solicitud.tipo_servicio_id == TipoServicio.id)
+        .outerjoin(Pago, Solicitud.id == Pago.solicitud_id)
+        .outerjoin(Mecanico, Solicitud.mecanico_id == Mecanico.id)
+        .outerjoin(MecanicoUsuario, Mecanico.usuario_id == MecanicoUsuario.id)
         .where(Solicitud.taller_id == tallerId)
         .order_by(Solicitud.fecha_creacion.desc())
     )
     result = await db.execute(query)
     
     lista = []
-    for sol, placa, nombre_serv in result.all():
+    for sol, placa, marca, modelo, anio, color, nombre_serv, estado_pago, cliente_nombre, mecanico_nombre in result.all():
         sol.placa_vehiculo = placa
+        sol.vehiculo_marca = marca
+        sol.vehiculo_modelo = modelo
+        sol.vehiculo_anio = anio
+        sol.vehiculo_color = color
         sol.nombre_servicio = nombre_serv
+        if estado_pago:
+            sol.estado_pago = estado_pago.value if hasattr(estado_pago, 'value') else estado_pago
+        
+        # Pydantic va a ignorar esto si no lo mapeamos, pero agreguemos al diccionario o como atributos
+        sol.cliente_nombre = cliente_nombre
+        sol.nombre_mecanico = mecanico_nombre
+        
+        lista.append(sol)
+    return lista
+
+async def listarServiciosEnVivoTaller(db: AsyncSession, tallerId: int):
+    """Listar las solicitudes EN VIVO de un taller (que no están finalizadas ni completadas ni canceladas)."""
+    MecanicoUsuario = aliased(Usuario)
+    query = (
+        select(Solicitud, Vehiculo.placa, Vehiculo.marca, Vehiculo.modelo, Vehiculo.anio, Vehiculo.color, TipoServicio.nombre, Pago.estado_pago, Usuario.nombre.label("cliente_nombre"), MecanicoUsuario.nombre.label("mecanico_nombre"))
+        .join(Vehiculo, Solicitud.vehiculo_id == Vehiculo.id)
+        .join(Usuario, Solicitud.cliente_id == Usuario.id)
+        .outerjoin(TipoServicio, Solicitud.tipo_servicio_id == TipoServicio.id)
+        .outerjoin(Pago, Solicitud.id == Pago.solicitud_id)
+        .outerjoin(Mecanico, Solicitud.mecanico_id == Mecanico.id)
+        .outerjoin(MecanicoUsuario, Mecanico.usuario_id == MecanicoUsuario.id)
+        .where(
+            Solicitud.taller_id == tallerId,
+            Solicitud.estado.notin_([EstadoSolicitudEnum.FINALIZADO, EstadoSolicitudEnum.CANCELADO])
+        )
+        .order_by(Solicitud.fecha_creacion.desc())
+    )
+    result = await db.execute(query)
+    
+    lista = []
+    for sol, placa, marca, modelo, anio, color, nombre_serv, estado_pago, cliente_nombre, mecanico_nombre in result.all():
+        sol.placa_vehiculo = placa
+        sol.vehiculo_marca = marca
+        sol.vehiculo_modelo = modelo
+        sol.vehiculo_anio = anio
+        sol.vehiculo_color = color
+        sol.nombre_servicio = nombre_serv
+        if estado_pago:
+            sol.estado_pago = estado_pago.value if hasattr(estado_pago, 'value') else estado_pago
+        
+        sol.cliente_nombre = cliente_nombre
+        sol.nombre_mecanico = mecanico_nombre
         lista.append(sol)
     return lista
 
 async def listarSolicitudesCliente(db: AsyncSession, clienteId: int):
     """Listar todas las solicitudes creadas por un cliente específico."""
     query = (
-        select(Solicitud, Vehiculo.placa, TipoServicio.nombre, Pago.estado_pago)
+        select(Solicitud, Vehiculo.placa, TipoServicio.nombre, Pago.estado_pago, Taller.nombre, Usuario.nombre, Usuario.telefono)
         .join(Vehiculo, Solicitud.vehiculo_id == Vehiculo.id)
         .outerjoin(TipoServicio, Solicitud.tipo_servicio_id == TipoServicio.id)
         .outerjoin(Pago, Solicitud.id == Pago.solicitud_id)
+        .outerjoin(Taller, Solicitud.taller_id == Taller.id)
+        .outerjoin(Mecanico, Solicitud.mecanico_id == Mecanico.id)
+        .outerjoin(Usuario, Mecanico.usuario_id == Usuario.id)
         .where(Solicitud.cliente_id == clienteId)
         .order_by(Solicitud.fecha_creacion.desc())
     )
     result = await db.execute(query)
     
     lista = []
-    for sol, placa, nombre_serv, estado_pago in result.all():
+    for sol, placa, nombre_serv, estado_pago, taller_nombre, nombre_mecanico, telefono_mecanico in result.all():
         sol.placa_vehiculo = placa
         sol.nombre_servicio = nombre_serv
+        sol.taller_nombre = taller_nombre
+        sol.nombre_mecanico = nombre_mecanico
+        sol.telefono_mecanico = telefono_mecanico
         if estado_pago:
             sol.estado_pago = estado_pago.value if hasattr(estado_pago, 'value') else estado_pago
         lista.append(sol)
@@ -246,8 +314,9 @@ async def listarSolicitudesCliente(db: AsyncSession, clienteId: int):
 async def listarSolicitudesMecanico(db: AsyncSession, mecanicoId: int):
     """Listar todas las solicitudes asignadas a un mecánico específico."""
     query = (
-        select(Solicitud, Vehiculo.placa, TipoServicio.nombre)
+        select(Solicitud, Vehiculo.placa, TipoServicio.nombre, Usuario.nombre.label("cliente_nombre"))
         .join(Vehiculo, Solicitud.vehiculo_id == Vehiculo.id)
+        .join(Usuario, Solicitud.cliente_id == Usuario.id)
         .outerjoin(TipoServicio, Solicitud.tipo_servicio_id == TipoServicio.id)
         .where(Solicitud.mecanico_id == mecanicoId)
         .order_by(Solicitud.fecha_creacion.desc())
@@ -255,9 +324,10 @@ async def listarSolicitudesMecanico(db: AsyncSession, mecanicoId: int):
     result = await db.execute(query)
     
     lista = []
-    for sol, placa, nombre_serv in result.all():
+    for sol, placa, nombre_serv, cliente_nombre in result.all():
         sol.placa_vehiculo = placa
         sol.nombre_servicio = nombre_serv
+        sol.cliente_nombre = cliente_nombre
         lista.append(sol)
     return lista
 
@@ -271,6 +341,7 @@ async def iniciarViaje(db: AsyncSession, solicitudId: int, mecanicoId: int):
         return None
         
     solicitud.estado = EstadoSolicitudEnum.EN_CAMINO
+    solicitud.fecha_en_camino = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(solicitud)
     return solicitud
@@ -285,15 +356,15 @@ async def llegarASitio(db: AsyncSession, solicitudId: int, mecanicoId: int):
         return None
         
     solicitud.estado = EstadoSolicitudEnum.EN_SITIO
+    solicitud.fecha_en_sitio = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(solicitud)
     return solicitud
 
 from app.models.pago import Pago, MetodoPagoEnum, EstadoPagoEnum
-from app.models.cobro_extra import CobroExtra
 
-async def finalizarServicio(db: AsyncSession, solicitudId: int, mecanicoId: int, cobros_extra: list, metodo_pago: str):
-    """Cambia el estado a FINALIZADO y registra cobros extra y pago."""
+async def finalizarServicio(db: AsyncSession, solicitudId: int, mecanicoId: int, precio_final: float, metodo_pago: str):
+    """Cambia el estado a FINALIZADO y registra pago."""
     query = select(Solicitud).where(Solicitud.id == solicitudId, Solicitud.mecanico_id == mecanicoId)
     res = await db.execute(query)
     solicitud = res.scalar_one_or_none()
@@ -301,23 +372,10 @@ async def finalizarServicio(db: AsyncSession, solicitudId: int, mecanicoId: int,
     if not solicitud:
         return None
 
-    # Calcular precio final
-    precio_estimado = float(solicitud.precio_estimado or 0.0)
-    total_extra = sum(extra.monto for extra in cobros_extra)
-    precio_final = precio_estimado + total_extra
-
-    # Guardar cobros extra en BD
-    for extra in cobros_extra:
-        nuevo_cobro = CobroExtra(
-            solicitud_id=solicitud.id,
-            concepto=extra.concepto,
-            monto=extra.monto
-        )
-        db.add(nuevo_cobro)
-
     # Actualizar solicitud
     solicitud.precio_final = precio_final
     solicitud.estado = EstadoSolicitudEnum.FINALIZADO
+    solicitud.fecha_finalizado = datetime.now(timezone.utc)
 
     # Crear el Pago pendiente
     metodo = MetodoPagoEnum.TARJETA
@@ -349,4 +407,30 @@ async def finalizarServicio(db: AsyncSession, solicitudId: int, mecanicoId: int,
     await db.refresh(solicitud)
     return solicitud
 
+async def cancelarSolicitud(db: AsyncSession, solicitudId: int, clienteId: int):
+    """Cambia el estado a CANCELADO, libera al mecánico y cancela el flujo."""
+    query = select(Solicitud).where(Solicitud.id == solicitudId, Solicitud.cliente_id == clienteId)
+    res = await db.execute(query)
+    solicitud = res.scalar_one_or_none()
+    
+    if not solicitud:
+        return None
+
+    if solicitud.estado in [EstadoSolicitudEnum.FINALIZADO, EstadoSolicitudEnum.CANCELADO]:
+        return None
+
+    # Liberar mecanico si estaba asignado
+    if solicitud.mecanico_id:
+        query_mec = select(Mecanico).where(Mecanico.id == solicitud.mecanico_id)
+        res_mec = await db.execute(query_mec)
+        mecanico_obj = res_mec.scalar_one_or_none()
+        if mecanico_obj:
+            mecanico_obj.disponible = True
+
+    solicitud.estado = EstadoSolicitudEnum.CANCELADO
+    solicitud.fecha_cancelado = datetime.now(timezone.utc)
+    
+    await db.commit()
+    await db.refresh(solicitud)
+    return solicitud
 

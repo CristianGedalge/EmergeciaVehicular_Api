@@ -7,8 +7,8 @@ from app.schemas.usuario import UsuarioUpdate
 from app.services.authServices import hashearPassword
 
 async def listarUsuarios(db: AsyncSession):
-    """Listar todos los usuarios del sistema."""
-    query = select(Usuario)
+    """Listar todos los usuarios activos del sistema."""
+    query = select(Usuario).where(Usuario.estado == True)
     result = await db.execute(query)
     return result.scalars().all()
 

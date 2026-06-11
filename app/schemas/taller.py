@@ -27,6 +27,8 @@ class TallerResponse(BaseModel):
     latitud: Optional[float]
     longitud: Optional[float]
     admin_id: int
+    admin_nombre: Optional[str] = None
+    puntaje: int
     estado: bool
     fecha_creacion: datetime
 

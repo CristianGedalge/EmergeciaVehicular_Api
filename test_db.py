@@ -1,19 +1,13 @@
 import asyncio
-from app.config.db import async_session
-from sqlalchemy import select
-from app.models.pago import Pago
-from app.models.solicitud import Solicitud
+from sqlalchemy.future import select
+from app.config.db import AsyncSessionLocal
+from app.models.taller import TipoServicio
 
-async def main():
-    async with async_session() as db:
-        result = await db.execute(select(Pago))
-        pagos = result.scalars().all()
-        for p in pagos:
-            print(f"Pago ID: {p.id}, Solicitud ID: {p.solicitud_id}, Estado: {p.estado_pago.value if p.estado_pago else None}, Metodo: {p.metodo_pago.value if p.metodo_pago else None}, Stripe ID: {p.stripe_payment_id}")
-            
-        result = await db.execute(select(Solicitud))
-        solicitudes = result.scalars().all()
-        for s in solicitudes:
-            print(f"Solicitud ID: {s.id}, Estado: {s.estado.value if s.estado else None}")
+async def test():
+    async with AsyncSessionLocal() as db:
+        res = await db.execute(select(TipoServicio))
+        for t in res.scalars().all():
+            print(f"ID: {t.id}, Nombre: '{t.nombre}'")
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(test())

@@ -1,18 +1,12 @@
 from pydantic import BaseModel
 from typing import List, Optional
 
-class CobroExtraCreate(BaseModel):
-    concepto: str
-    monto: float
-
 class CrearPaymentIntentRequest(BaseModel):
     solicitud_id: int
-    cobros_extra: List[CobroExtraCreate] = []
+    monto_pagar: float
 
 class PaymentIntentResponse(BaseModel):
     client_secret: str
-    precio_estimado: float
-    total_extra: float
     precio_final: float
 
 class ConfirmarPagoRequest(BaseModel):

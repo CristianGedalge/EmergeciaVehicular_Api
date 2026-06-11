@@ -13,5 +13,6 @@ class Taller(Base):
     latitud = Column(Numeric(10, 7), nullable=True)
     longitud = Column(Numeric(10, 7), nullable=True)
     admin_id = Column(Integer, ForeignKey("usuario.id"), nullable=False)
+    puntaje = Column(Integer, server_default="0", nullable=False)
     estado = Column(Boolean, default=True, nullable=False)
     fecha_creacion = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

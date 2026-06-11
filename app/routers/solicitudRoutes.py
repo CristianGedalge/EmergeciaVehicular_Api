@@ -18,9 +18,9 @@ from app.models.usuario import Usuario
 from app.models.notificacion import Notificacion
 from app.services.solicitudServices import (
     crearSolicitud, clasificarYPublicar, listarSolicitudesParaTalleres, 
-    aceptarSolicitud, asignarMecanico, listarHistorialTaller,
+    aceptarSolicitud, asignarMecanico, listarHistorialTaller, listarServiciosEnVivoTaller,
     listarSolicitudesCliente, listarSolicitudesMecanico,
-    iniciarViaje, llegarASitio, finalizarServicio
+    iniciarViaje, llegarASitio, finalizarServicio, cancelarSolicitud
 )
 
 router = APIRouter(
@@ -155,6 +155,18 @@ async def listarHistorialRoute(
         
     return await listarHistorialTaller(db, tallerId)
 
+@router.get("/en-vivo", response_model=List[SolicitudResponse])
+async def listarServiciosEnVivoRoute(
+    db: AsyncSession = Depends(get_db),
+    usuario: dict = Depends(RequireRole(["admin"]))
+):
+    """Listar los servicios en vivo (no finalizados/cancelados) de este taller."""
+    tallerId = usuario.get("tallerId")
+    if not tallerId:
+        raise HTTPException(status_code=400, detail="El usuario no tiene un taller asociado")
+        
+    return await listarServiciosEnVivoTaller(db, tallerId)
+
 @router.get("/cliente", response_model=List[SolicitudResponse])
 async def listarSolicitudesClienteRoute(
     db: AsyncSession = Depends(get_db),
@@ -272,7 +284,7 @@ async def finalizarServicioRoute(
         db, 
         solicitudId, 
         mecanicoId, 
-        datos.cobros_extra, 
+        datos.precio_final, 
         datos.metodo_pago
     )
     if not solicitud:
@@ -298,4 +310,32 @@ async def finalizarServicioRoute(
         "evento": "ESTADO_ACTUALIZADO",
         "datos": {"solicitud_id": solicitud.id, "estado": "FINALIZADO"}
     })
+    return solicitud
+@router.post("/{id}/cancelar", response_model=SolicitudResponse)
+async def cancelar_solicitud(
+    id: int, 
+    db: AsyncSession = Depends(get_db), 
+    usuario: dict = Depends(RequireRole(["cliente"]))
+):
+    """Cliente rechaza el presupuesto o cancela la solicitud."""
+    cliente_id = int(usuario["sub"])
+    solicitud = await cancelarSolicitud(db, id, cliente_id)
+    if not solicitud:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada, ya finalizada o no pertenece al cliente.")
+    
+    # Notificar WebSocket
+    payload = {
+        "evento": "SOLICITUD_CANCELADA",
+        "datos": {
+            "solicitud_id": solicitud.id,
+            "estado": solicitud.estado.value
+        }
+    }
+    await socket_manager.send_to_user(cliente_id, payload)
+    if solicitud.taller_id:
+        await socket_manager.send_to_taller(solicitud.taller_id, payload)
+    if hasattr(solicitud, 'mecanico_id') and solicitud.mecanico_id:
+        # El mecánico se conecta al mismo manager usando su mecanico_id como key
+        await socket_manager.send_to_taller(solicitud.mecanico_id, payload)
+        
     return solicitud

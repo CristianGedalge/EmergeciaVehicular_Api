@@ -1,14 +1,24 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.models.taller import Taller
+from app.models.usuario import Usuario
 from app.schemas.taller import TallerCreate, TallerUpdate
 
 
 async def listarTalleres(db: AsyncSession):
-    """Obtener todos los talleres activos."""
-    query = select(Taller).where(Taller.estado == True)
+    """Obtener todos los talleres activos con nombre de su admin."""
+    query = (
+        select(Taller, Usuario.nombre.label("admin_nombre"))
+        .outerjoin(Usuario, Taller.admin_id == Usuario.id)
+        .where(Taller.estado == True)
+    )
     result = await db.execute(query)
-    return result.scalars().all()
+    
+    lista = []
+    for taller, admin_nombre in result.all():
+        taller.admin_nombre = admin_nombre
+        lista.append(taller)
+    return lista
 
 
 async def obtenerTaller(db: AsyncSession, taller_id: int):

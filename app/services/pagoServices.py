@@ -5,7 +5,6 @@ from sqlalchemy.future import select
 from fastapi import HTTPException, status
 from app.models.solicitud import Solicitud, EstadoSolicitudEnum
 from app.models.pago import Pago, MetodoPagoEnum, EstadoPagoEnum
-from app.models.cobro_extra import CobroExtra
 from app.schemas.pago import CrearPaymentIntentRequest, PaymentIntentResponse, ConfirmarPagoRequest
 from dotenv import load_dotenv
 
@@ -30,21 +29,9 @@ class PagoService:
         if solicitud.estado not in [EstadoSolicitudEnum.EN_SITIO, EstadoSolicitudEnum.FINALIZADO]:
             raise HTTPException(status_code=400, detail="La solicitud no está en estado válido para pago")
 
-        # Si ya está FINALIZADO, los cobros extra ya fueron guardados por el mecánico.
-        # Si está EN_SITIO, el cliente está pagando antes de que el mecánico finalice.
+        # Si ya está FINALIZADO o EN_SITIO, guardamos el precio que el cliente debe pagar
         if solicitud.estado == EstadoSolicitudEnum.EN_SITIO:
-            precio_estimado = float(solicitud.precio_estimado or 0.0)
-            total_extra = sum(extra.monto for extra in req.cobros_extra)
-            precio_final = precio_estimado + total_extra
-
-            # Guardar cobros extra en la BD
-            for extra in req.cobros_extra:
-                nuevo_cobro = CobroExtra(
-                    solicitud_id=solicitud.id,
-                    concepto=extra.concepto,
-                    monto=extra.monto
-                )
-                db.add(nuevo_cobro)
+            precio_final = req.monto_pagar
 
             # Actualizar precio final en la solicitud
             solicitud.precio_final = precio_final
@@ -71,8 +58,6 @@ class PagoService:
             
             return PaymentIntentResponse(
                 client_secret=intent.client_secret,
-                precio_estimado=precio_estimado,
-                total_extra=total_extra,
                 precio_final=precio_final
             )
         except Exception as e:

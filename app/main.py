@@ -5,6 +5,10 @@ from contextlib import asynccontextmanager
 from app.config.db import async_engine
 from app.models.base import Base
 
+# Importar routers ANTES del lifespan para que Base reconozca los modelos
+from app.routers import authRoutes, tallerRoutes, mecanicoRoutes, tipoServicioRoutes, vehiculoRoutes, solicitudRoutes, usuarioRoutes, websocketRoutes, pagoRoutes
+from app.routers import metricsRoutes, reportesRoutes
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -36,8 +40,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Routers
-from app.routers import authRoutes, tallerRoutes, mecanicoRoutes, tipoServicioRoutes, vehiculoRoutes, solicitudRoutes, usuarioRoutes, websocketRoutes, pagoRoutes
+# Routers (Ya importados arriba)
 app.include_router(authRoutes.router)
 app.include_router(tallerRoutes.router)
 app.include_router(mecanicoRoutes.router)
@@ -47,6 +50,8 @@ app.include_router(solicitudRoutes.router)
 app.include_router(usuarioRoutes.router)
 app.include_router(websocketRoutes.router)
 app.include_router(pagoRoutes.router)
+app.include_router(metricsRoutes.router)
+app.include_router(reportesRoutes.router)
 
 
 @app.get("/")

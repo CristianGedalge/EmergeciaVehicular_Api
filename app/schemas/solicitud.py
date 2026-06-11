@@ -21,11 +21,22 @@ class SolicitudResponse(BaseModel):
     
     estado: EstadoSolicitudEnum
     fecha_creacion: datetime
+    fecha_aceptado: Optional[datetime] = None
+    fecha_en_camino: Optional[datetime] = None
+    fecha_en_sitio: Optional[datetime] = None
     
     # Campos adicionales para vista rápida
     placa_vehiculo: Optional[str] = None
     nombre_servicio: Optional[str] = None
     estado_pago: Optional[str] = None
+    taller_nombre: Optional[str] = None
+    nombre_mecanico: Optional[str] = None
+    telefono_mecanico: Optional[str] = None
+    cliente_nombre: Optional[str] = None
+    vehiculo_marca: Optional[str] = None
+    vehiculo_modelo: Optional[str] = None
+    vehiculo_anio: Optional[int] = None
+    vehiculo_color: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -40,5 +51,5 @@ class CobroExtraSchema(BaseModel):
     monto: float
 
 class FinalizarServicioRequest(BaseModel):
-    cobros_extra: List[CobroExtraSchema] = []
+    precio_final: float
     metodo_pago: str = "TARJETA" # TARJETA, EFECTIVO, QR
