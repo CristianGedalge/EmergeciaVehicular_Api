@@ -125,6 +125,50 @@ async def aceptarSolicitudRoute(
             status_code=400, 
             detail="La solicitud ya no está disponible o ya fue aceptada."
         )
+        
+    # --- ENVIAR PUSH NOTIFICATION AL CLIENTE ---
+    try:
+        from app.models.taller import Taller
+        # 1. Obtener nombre del taller
+        query_taller = select(Taller.nombre).where(Taller.id == tallerId)
+        res_taller = await db.execute(query_taller)
+        taller_nombre = res_taller.scalar_one_or_none() or "Un taller"
+
+        # 2. Obtener nombre y token FCM del cliente
+        query_cliente = select(Usuario.nombre, Usuario.fcm_token).where(Usuario.id == solicitud.cliente_id)
+        res_cliente = await db.execute(query_cliente)
+        cliente_row = res_cliente.first()
+        
+        cliente_nombre = "cliente"
+        fcm_token = None
+        if cliente_row:
+            cliente_nombre = cliente_row[0]
+            fcm_token = cliente_row[1]
+
+        # 3. Enviar notificación push
+        if fcm_token:
+            print(f"📲 Intentando enviar push al cliente {cliente_nombre} (token: {fcm_token[:20]}...)")
+            await enviarPushNotification(
+                fcm_token=fcm_token,
+                titulo="🏢 ¡Servicio aceptado!",
+                cuerpo=f"El taller {taller_nombre} ha aceptado tu servicio, {cliente_nombre}.",
+                data={"solicitud_id": str(solicitud.id), "tipo": "ESTADO_VIAJE", "estado": "ACEPTADO"}
+            )
+            print(f"📲 Push de aceptación enviado al cliente {cliente_nombre}")
+        else:
+            print(f"⚠️ El cliente {cliente_nombre} no tiene token FCM registrado.")
+    except Exception as e:
+        print(f"Error al enviar push de aceptación al cliente: {e}")
+
+    # --- ENVIAR SOCKET AL CLIENTE ---
+    try:
+        await socket_manager.send_to_user(solicitud.cliente_id, {
+            "evento": "ESTADO_ACTUALIZADO",
+            "datos": {"solicitud_id": solicitud.id, "estado": "ACEPTADO"}
+        })
+    except Exception as e:
+        print(f"Error al enviar websocket de aceptación al cliente: {e}")
+
     return solicitud
 
 @router.post("/{solicitudId}/asignar", response_model=SolicitudResponse)

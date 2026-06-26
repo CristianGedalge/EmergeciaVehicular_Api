@@ -1,4 +1,16 @@
 services:
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: erp
+      POSTGRES_PASSWORD: Abril2026+++
+      POSTGRES_DB: emergenciavehiculardb
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   api:
     build: .
     ports:
@@ -7,9 +19,16 @@ services:
       - .env
     volumes:
       - .:/app
+      - /app/.venv # Evita que la carpeta local sobreescriba el entorno virtual interno
     environment:
-      - DB_URL=${DATABASE_URL:-} # Reemplaza con tu variable de conexión si es distinta
+      - POSTGRES_HOST=db # Redirige el host al contenedor de base de datos db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=erp
+      - POSTGRES_PASSWORD=Abril2026+++
+      - POSTGRES_DB=emergenciavehiculardb
+    depends_on:
+      - db
     restart: always
 
-# Nota: Si necesitas una base de datos local para pruebas en docker, 
-# puedes agregar un servicio de 'db' aquí.
+volumes:
+  postgres_data:

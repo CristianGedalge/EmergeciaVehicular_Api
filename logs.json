@@ -1,0 +1,205 @@
+{
+    "events": [
+        {
+            "timestamp": 1781712753521,
+            "message": "DEBUG_SOCKET: Intentando enviar a taller 14. Conexiones actuales en memoria: [1, 5]",
+            "ingestionTime": 1781712757284
+        },
+        {
+            "timestamp": 1781712753521,
+            "message": "DEBUG_SOCKET: El taller 14 NO está conectado en este momento.",
+            "ingestionTime": 1781712757284
+        },
+        {
+            "timestamp": 1781712753521,
+            "message": "[WS Log] Enviando a Taller 1",
+            "ingestionTime": 1781712757284
+        },
+        {
+            "timestamp": 1781712753521,
+            "message": "DEBUG_SOCKET: Intentando enviar a taller 1. Conexiones actuales en memoria: [1, 5]",
+            "ingestionTime": 1781712757284
+        },
+        {
+            "timestamp": 1781712753521,
+            "message": "DEBUG_SOCKET: Mensaje JSON enviado con éxito a taller 1",
+            "ingestionTime": 1781712757284
+        },
+        {
+            "timestamp": 1781712753521,
+            "message": "====================",
+            "ingestionTime": 1781712757284
+        },
+        {
+            "timestamp": 1781712758499,
+            "message": "===== DEBUG WS =====",
+            "ingestionTime": 1781712762281
+        },
+        {
+            "timestamp": 1781712758500,
+            "message": "[WS Log] Recibido ACTUALIZAR_UBICACION -> Lat: -17.7765328, Lng: -63.1942434 | Cliente_id: 14, Taller_id: 1",
+            "ingestionTime": 1781712762281
+        },
+        {
+            "timestamp": 1781712758500,
+            "message": "[WS Log] Conexiones activas en este servidor: [1, 5]",
+            "ingestionTime": 1781712762281
+        },
+        {
+            "timestamp": 1781712758500,
+            "message": "[WS Log] Cliente 14 NO está conectado a este servidor.",
+            "ingestionTime": 1781712762281
+        },
+        {
+            "timestamp": 1781712758500,
+            "message": "DEBUG_SOCKET: Intentando enviar a taller 14. Conexiones actuales en memoria: [1, 5]",
+            "ingestionTime": 1781712762281
+        },
+        {
+            "timestamp": 1781712758500,
+            "message": "DEBUG_SOCKET: El taller 14 NO está conectado en este momento.",
+            "ingestionTime": 1781712762281
+        },
+        {
+            "timestamp": 1781712758500,
+            "message": "[WS Log] Enviando a Taller 1",
+            "ingestionTime": 1781712762281
+        },
+        {
+            "timestamp": 1781712758500,
+            "message": "DEBUG_SOCKET: Intentando enviar a taller 1. Conexiones actuales en memoria: [1, 5]",
+            "ingestionTime": 1781712762281
+        },
+        {
+            "timestamp": 1781712758500,
+            "message": "DEBUG_SOCKET: Mensaje JSON enviado con éxito a taller 1",
+            "ingestionTime": 1781712762281
+        },
+        {
+            "timestamp": 1781712758500,
+            "message": "====================",
+            "ingestionTime": 1781712762281
+        },
+        {
+            "timestamp": 1781712759152,
+            "message": "===== DEBUG WS =====",
+            "ingestionTime": 1781712762281
+        },
+        {
+            "timestamp": 1781712759152,
+            "message": "[WS Log] Recibido ACTUALIZAR_UBICACION -> Lat: -17.7765788, Lng: -63.1939842 | Cliente_id: 14, Taller_id: 1",
+            "ingestionTime": 1781712762281
+        },
+        {
+            "timestamp": 1781712759152,
+            "message": "[WS Log] Conexiones activas en este servidor: [1, 5]",
+            "ingestionTime": 1781712762281
+        },
+        {
+            "timestamp": 1781712759152,
+            "message": "[WS Log] Cliente 14 NO está conectado a este servidor.",
+            "ingestionTime": 1781712762281
+        },
+        {
+            "timestamp": 1781712759152,
+            "message": "DEBUG_SOCKET: Intentando enviar a taller 14. Conexiones actuales en memoria: [1, 5]",
+            "ingestionTime": 1781712762281
+        },
+        {
+            "timestamp": 1781712759152,
+            "message": "DEBUG_SOCKET: El taller 14 NO está conectado en este momento.",
+            "ingestionTime": 1781712762281
+        },
+        {
+            "timestamp": 1781712759152,
+            "message": "[WS Log] Enviando a Taller 1",
+            "ingestionTime": 1781712762281
+        },
+        {
+            "timestamp": 1781712759152,
+            "message": "DEBUG_SOCKET: Intentando enviar a taller 1. Conexiones actuales en memoria: [1, 5]",
+            "ingestionTime": 1781712762281
+        },
+        {
+            "timestamp": 1781712759152,
+            "message": "DEBUG_SOCKET: Mensaje JSON enviado con éxito a taller 1",
+            "ingestionTime": 1781712762281
+        },
+        {
+            "timestamp": 1781712759152,
+            "message": "====================",
+            "ingestionTime": 1781712762281
+        },
+        {
+            "timestamp": 1781712762349,
+            "message": "INFO:     172.31.72.217:21852 - \"GET / HTTP/1.1\" 200 OK",
+            "ingestionTime": 1781712767285
+        },
+        {
+            "timestamp": 1781712762349,
+            "message": "INFO:     172.31.25.163:13810 - \"GET / HTTP/1.1\" 200 OK",
+            "ingestionTime": 1781712767285
+        },
+        {
+            "timestamp": 1781712762580,
+            "message": "INFO:     172.31.48.131:30498 - \"GET / HTTP/1.1\" 200 OK",
+            "ingestionTime": 1781712767285
+        },
+        {
+            "timestamp": 1781712764122,
+            "message": "===== DEBUG WS =====",
+            "ingestionTime": 1781712767285
+        },
+        {
+            "timestamp": 1781712764122,
+            "message": "[WS Log] Recibido ACTUALIZAR_UBICACION -> Lat: -17.7765618, Lng: -63.1942234 | Cliente_id: 14, Taller_id: 1",
+            "ingestionTime": 1781712767285
+        },
+        {
+            "timestamp": 1781712764122,
+            "message": "[WS Log] Conexiones activas en este servidor: [1, 5]",
+            "ingestionTime": 1781712767285
+        },
+        {
+            "timestamp": 1781712764122,
+            "message": "[WS Log] Cliente 14 NO está conectado a este servidor.",
+            "ingestionTime": 1781712767285
+        },
+        {
+            "timestamp": 1781712764122,
+            "message": "DEBUG_SOCKET: Intentando enviar a taller 14. Conexiones actuales en memoria: [1, 5]",
+            "ingestionTime": 1781712767285
+        },
+        {
+            "timestamp": 1781712764122,
+            "message": "DEBUG_SOCKET: El taller 14 NO está conectado en este momento.",
+            "ingestionTime": 1781712767285
+        },
+        {
+            "timestamp": 1781712764122,
+            "message": "[WS Log] Enviando a Taller 1",
+            "ingestionTime": 1781712767285
+        },
+        {
+            "timestamp": 1781712764122,
+            "message": "DEBUG_SOCKET: Intentando enviar a taller 1. Conexiones actuales en memoria: [1, 5]",
+            "ingestionTime": 1781712767285
+        },
+        {
+            "timestamp": 1781712764122,
+            "message": "DEBUG_SOCKET: Mensaje JSON enviado con éxito a taller 1",
+            "ingestionTime": 1781712767285
+        },
+        {
+            "timestamp": 1781712764122,
+            "message": "====================",
+            "ingestionTime": 1781712767285
+        },
+        {
+            "timestamp": 1781712765162,
+            "message": "INFO:     172.31.37.9:1110 - \"GET / HTTP/1.1\" 200 OK",
+            "ingestionTime": 1781712767285
+        },
+        {
+            "timestamp": 1781712766239,
+            "message": 

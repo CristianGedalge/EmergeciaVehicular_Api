@@ -1,0 +1,65 @@
+{
+  "family": "emergencia-vehicular-task",
+  "executionRoleArn": "arn:aws:iam::431856071436:role/ecsTaskExecutionRole",
+  "networkMode": "awsvpc",
+  "containerDefinitions": [
+    {
+      "name": "api",
+      "image": "431856071436.dkr.ecr.us-east-1.amazonaws.com/emergencia-vehicular-api:latest",
+      "cpu": 0,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "hostPort": 8000,
+          "protocol": "tcp",
+          "name": "api-8000-tcp",
+          "appProtocol": "http"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        { "name": "POSTGRES_HOST", "value": "POSTGRES_HOST_PLACEHOLDER" },
+        { "name": "POSTGRES_PORT", "value": "5432" },
+        { "name": "POSTGRES_DB", "value": "POSTGRES_DB_PLACEHOLDER" },
+        { "name": "POSTGRES_USER", "value": "POSTGRES_USER_PLACEHOLDER" },
+        { "name": "POSTGRES_PASSWORD", "value": "POSTGRES_PASSWORD_PLACEHOLDER" },
+        { "name": "SECRET_KEY", "value": "SECRET_KEY_PLACEHOLDER" },
+        { "name": "ALGORITHM", "value": "HS256" },
+        { "name": "ACCESS_TOKEN_EXPIRE_HOURS", "value": "12" },
+        { "name": "MAIL_FROM", "value": "MAIL_FROM_PLACEHOLDER" },
+        { "name": "MAIL_PASSWORD", "value": "MAIL_PASSWORD_PLACEHOLDER" },
+        { "name": "MAIL_SERVER", "value": "smtp.gmail.com" },
+        { "name": "MAIL_PORT", "value": "587" },
+        { "name": "RESET_TOKEN_EXPIRE_MINUTES", "value": "30" },
+        { "name": "FRONTEND_URL", "value": "http://localhost:3000" },
+        { "name": "CLOUDINARY_CLOUD_NAME", "value": "CLOUDINARY_CLOUD_NAME_PLACEHOLDER" },
+        { "name": "CLOUDINARY_API_KEY", "value": "CLOUDINARY_API_KEY_PLACEHOLDER" },
+        { "name": "CLOUDINARY_API_SECRET", "value": "CLOUDINARY_API_SECRET_PLACEHOLDER" },
+        { "name": "GEMINI_API_KEY", "value": "GEMINI_API_KEY_PLACEHOLDER" },
+        { "name": "GROQ_API_KEY", "value": "GROQ_API_KEY_PLACEHOLDER" },
+        { "name": "GOOGLE_MAP_KEY", "value": "GOOGLE_MAP_KEY_PLACEHOLDER" },
+        { "name": "STRIPE_SECRET_KEY", "value": "STRIPE_SECRET_KEY_PLACEHOLDER" },
+        { "name": "STRIPE_PUBLIC_KEY", "value": "STRIPE_PUBLIC_KEY_PLACEHOLDER" },
+        { "name": "FIREBASE_CREDENTIALS", "value": "FIREBASE_CREDENTIALS_PLACEHOLDER" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/emergencia-vehicular-task",
+          "awslogs-create-group": "true",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "512",
+  "memory": "1024",
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  }
+}
