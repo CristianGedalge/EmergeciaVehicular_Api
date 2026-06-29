@@ -31,3 +31,6 @@ firebase-credenciales.json
 google-credentials.json
 google-services.json
 *.json.bak
+
+# AWS Task Definition (contains secrets - use placeholders only)
+task-definition.json
